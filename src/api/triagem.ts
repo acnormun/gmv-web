@@ -16,3 +16,18 @@ export async function getProcessos(): Promise<Processo[]> {
   }
   return await res.json()
 }
+
+export async function addProcesso(processo: Processo): Promise<void> {
+  const res = await fetch(`${API_BASE}/triagem`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(processo)
+  })
+
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.message || 'Erro ao adicionar processo')
+  }
+}

@@ -4,18 +4,21 @@
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-xl">Processos</h1>
         <div class="flex space-x-2">
-          <button
-            class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50"
-          >
+          <button class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50">
             <img src="../assets/download-solid.svg" class="h-5 w-5" alt="Exportar" />
             <span>Exportar</span>
           </button>
-          <button
-            class="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-md hover:bg-neutral-800"
-          >
-            <img src="../assets/plus-solid.svg" class="h-5 w-5" alt="Adicionar" />
-            <span>Novo Processo</span>
-          </button>
+          <div class="flex justify-end mb-4">
+            <button
+              @click="showModal = true"
+              class="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800"
+            >
+              <img src="@/assets/plus-solid.svg" class="w-4 h-4" />
+              Novo Processo
+            </button>
+          </div>
+
+          <AddTriagem :open="showModal" @close="showModal = false" @added="solicitarAtualizacao" />
         </div>
       </div>
 
@@ -33,7 +36,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in data" :key="index" class="border-b hover:bg-neutral-50">
+            <tr v-for="(item, index) in lista" :key="index" class="border-b hover:bg-neutral-50">
               <td class="py-3 px-4">{{ item.numeroProcesso }}</td>
               <td class="py-3 px-4">{{ item.tema }}</td>
               <td class="py-3 px-4">{{ item.dataDistribuicao }}</td>
@@ -61,17 +64,28 @@
       </div>
 
       <div class="flex justify-between items-center mt-6">
-        <div class="text-sm text-neutral-600">Mostrando {{ data.length }} resultados</div>
+        <div class="text-sm text-neutral-600">Mostrando {{ lista.length }} resultados</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps({
-  data: {
-    type: Array<any>,
-    required: true,
-  },
-})
+import { ref, computed } from 'vue'
+import AddTriagem from './AddTriagem.vue'
+import type { Processo } from '@/api/triagem'
+
+const showModal = ref(false)
+
+const emit = defineEmits(['refresh'])
+
+const props = defineProps<{
+  data: Processo[]
+}>()
+
+const lista = computed(() => props.data)
+
+function solicitarAtualizacao() {
+  emit('refresh')
+}
 </script>
