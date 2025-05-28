@@ -1,24 +1,32 @@
 <template>
-  <header id="header" class="w-full h-[65px] border-b bg-white shadow-sm flex items-center justify-center">
-    <div class="w-full max-w-[1920px] px-6 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <FontAwesomeIcon :icon="['fas', 'scale-balanced']" />
-        <span class="title text-xl font-semibold text-neutral-800">Gabinete - Márcio Vidal</span>
+  <main>
+    <header
+      id="header"
+      class="w-full h-[65px] border-b bg-white shadow-sm flex items-center justify-center"
+    >
+      <div class="w-full max-w-[1920px] px-6 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <img src="./assets/scale-balanced-solid.svg" class="w-6 h-6" ></img><span class="title text-xl font-semibold text-neutral-800">Gabinete - Márcio Vidal</span>
+        </div>
       </div>
-    </div>
-  </header>
-
-  <RouterView />
+    </header>
+    <RouterView />
+  </main>
 </template>
-
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 </script>
 
 <style scoped>
-.title{
+main{
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #F9FAFB;
+  font-family: Inter;
+}
+.title {
   font-family: Inter;
 }
 </style>
