@@ -14,13 +14,23 @@
         </div>
         <div>
           <label class="block text-sm text-neutral-600 mb-1">Tema</label>
-          <input
-            v-model="filtros.tema"
-            type="text"
-            class="w-full border rounded-md px-3 py-2"
-            placeholder="Ex: Direito Civil"
-          />
+          <div class="border rounded-md bg-white max-h-40 overflow-y-auto px-3 py-2 space-y-1">
+            <label
+              v-for="tema in temas"
+              :key="tema"
+              class="flex items-center space-x-2 text-sm text-neutral-700"
+            >
+              <input
+                type="checkbox"
+                :value="tema"
+                v-model="filtros.tema"
+                class="text-neutral-900 focus:ring-neutral-500 rounded"
+              />
+              <span>{{ tema }}</span>
+            </label>
+          </div>
         </div>
+
         <div>
           <label class="block text-sm text-neutral-600 mb-1">Data da Distribuição</label>
           <input
@@ -42,9 +52,10 @@
           <label class="block text-sm text-neutral-600 mb-1">Status</label>
           <select v-model="filtros.status" class="w-full border rounded-md px-3 py-2">
             <option value="">Todos</option>
+            <option>Aberto</option>
             <option>Em andamento</option>
+            <option>Para revisão</option>
             <option>Concluído</option>
-            <option>Arquivado</option>
           </select>
         </div>
         <div>
@@ -55,7 +66,10 @@
             class="w-full border rounded-md px-3 py-2"
           />
         </div>
-        <button @click="emitirFiltros" class="w-full bg-neutral-900 text-white py-2 rounded-md hover:bg-neutral-800">
+        <button
+          @click="emitirFiltros"
+          class="w-full bg-neutral-900 text-white py-2 rounded-md hover:bg-neutral-800"
+        >
           Aplicar Filtros
         </button>
       </div>
@@ -67,18 +81,52 @@
 import { reactive } from 'vue'
 const emit = defineEmits(['apply'])
 
+const temas = [
+  'CÍVEL',
+  'PENAL',
+  'SAÚDE',
+  'TRABALHISTA',
+  'ADMINISTRATIVO',
+  'TRIBUTÁRIO',
+  'PREVIDENCIÁRIO',
+  'CONSUMIDOR',
+  'FAMÍLIA',
+  'AMBIENTAL',
+  'EMPRESARIAL',
+  'ELEITORAL',
+  'IMOBILIÁRIO',
+  'MILITAR',
+  'DIGITAL',
+]
+
 const filtros = reactive({
   numeroProcesso: '',
-  tema: '',
+  tema: [] as string[],
   dataDistribuicao: '',
   responsavel: '',
   status: '',
-  ultimaAtualizacao: ''
+  ultimaAtualizacao: '',
 })
 
 const emitirFiltros = () => {
   emit('apply', { ...filtros })
 }
+
+function statusPillClass(status: string): string {
+  switch (status) {
+    case 'Aberto':
+      return 'bg-neutral-300 text-neutral-800'
+    case 'Em andamento':
+      return 'bg-blue-100 text-blue-800'
+    case 'Para revisão':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'Concluído':
+      return 'bg-green-100 text-green-800'
+    default:
+      return 'bg-neutral-100 text-neutral-600'
+  }
+}
+
 </script>
 
 <style>

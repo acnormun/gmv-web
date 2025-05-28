@@ -8,15 +8,13 @@
             <img src="../assets/download-solid.svg" class="h-5 w-5" alt="Exportar" />
             <span>Exportar</span>
           </button>
-          <div class="flex justify-end mb-4">
-            <button
-              @click="showModal = true"
-              class="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800"
-            >
-              <img src="@/assets/plus-solid.svg" class="w-4 h-4" />
-              Novo Processo
-            </button>
-          </div>
+          <button
+            @click="showModal = true"
+            class="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800"
+          >
+            <img src="@/assets/plus-solid.svg" class="w-4 h-4" />
+            Novo Processo
+          </button>
 
           <AddTriagem :open="showModal" @close="showModal = false" @added="solicitarAtualizacao" />
         </div>
@@ -42,7 +40,10 @@
               <td class="py-3 px-4">{{ item.dataDistribuicao }}</td>
               <td class="py-3 px-4">{{ item.responsavel }}</td>
               <td class="py-3 px-4">
-                <span class="px-2 py-1 bg-neutral-100 rounded-full text-sm">
+                <span
+                  class="px-2 py-1 rounded-full text-sm font-medium"
+                  :class="statusPillClass(item.status)"
+                >
                   {{ item.status }}
                 </span>
               </td>
@@ -87,5 +88,20 @@ const lista = computed(() => props.data)
 
 function solicitarAtualizacao() {
   emit('refresh')
+}
+
+function statusPillClass(status: string): string {
+  switch (status) {
+    case 'Aberto':
+      return 'bg-neutral-300 text-neutral-800'
+    case 'Em andamento':
+      return 'bg-blue-100 text-blue-800'
+    case 'Para revisão':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'Concluído':
+      return 'bg-green-100 text-green-800'
+    default:
+      return 'bg-neutral-100 text-neutral-600'
+  }
 }
 </script>

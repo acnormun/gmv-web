@@ -21,13 +21,29 @@
         </div>
         <div>
           <label class="block text-sm text-neutral-500 mb-1">Tema</label>
-          <input
+          <select
             v-model="form.tema"
-            type="text"
             class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
-            placeholder="Digite o tema"
             required
-          />
+          >
+            <option disabled value="">Selecione o tema</option>
+            <option>CÍVEL</option>
+            <option>PENAL</option>
+            <option>TRABALHISTA</option>
+            <option>SAÚDE</option>
+            <option>ADMINISTRATIVO</option>
+            <option>TRIBUTÁRIO</option>
+            <option>PREVIDENCIÁRIO</option>
+            <option>CONSUMIDOR</option>
+            <option>FAMÍLIA</option>
+            <option>AMBIENTAL</option>
+            <option>EXECUÇÃO FISCAL</option>
+            <option>EMPRESARIAL</option>
+            <option>ELEITORAL</option>
+            <option>IMOBILIÁRIO</option>
+            <option>MILITAR</option>
+            <option>DIGITAL</option>
+          </select>
         </div>
         <div>
           <label class="block text-sm text-neutral-500 mb-1">Data de abertura</label>
@@ -38,7 +54,9 @@
               class="w-full border border-neutral-200 rounded-md px-3 py-2 pr-9 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
               required
             />
-            <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+            <span
+              class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400"
+            >
               <i class="fa-regular fa-calendar"></i>
             </span>
           </div>
@@ -61,8 +79,9 @@
               class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
               required
             >
-              <option>Em andamento</option>
               <option>Aberto</option>
+              <option>Em andamento</option>
+              <option>Para revisão</option>
               <option>Concluído</option>
             </select>
           </div>
@@ -75,7 +94,9 @@
                 class="w-full border border-neutral-200 rounded-md px-3 py-2 pr-9 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
                 required
               />
-              <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+              <span
+                class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400"
+              >
                 <i class="fa-regular fa-calendar"></i>
               </span>
             </div>
@@ -105,7 +126,10 @@
           >
             Cancelar
           </button>
-          <button type="submit" class="bg-neutral-900 text-white px-5 py-2 rounded-md hover:bg-neutral-800">
+          <button
+            type="submit"
+            class="bg-neutral-900 text-white px-5 py-2 rounded-md hover:bg-neutral-800"
+          >
             Salvar
           </button>
         </div>
@@ -130,6 +154,7 @@ const form = ref({
   ultimaAtualizacao: ''
 })
 
+
 const arquivoPdf = ref<File | null>(null)
 
 function handlePdf(event: Event) {
@@ -149,13 +174,13 @@ async function submit() {
     const markdown = await pdfToMarkdown(arquivoPdf.value)
     const payload = {
       ...form.value,
-      markdown
+      markdown,
     }
 
     const res = await fetch('http://localhost:5000/triagem/form', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     })
 
     if (!res.ok) {
@@ -169,7 +194,7 @@ async function submit() {
       dataDistribuicao: '',
       responsavel: '',
       status: 'Em andamento',
-      ultimaAtualizacao: ''
+      ultimaAtualizacao: '',
     }
     arquivoPdf.value = null
 
