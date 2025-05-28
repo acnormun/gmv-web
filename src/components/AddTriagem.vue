@@ -1,37 +1,111 @@
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50"
+    id="modal-overlay"
+    class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-40"
   >
-    <div class="bg-white p-6 rounded-lg shadow w-[400px]">
-      <h2 class="text-lg font-semibold mb-4">Novo Processo</h2>
-      <form @submit.prevent="submit">
-        <input v-model="form.numeroProcesso" class="input" placeholder="Número do Processo" required />
-        <input v-model="form.tema" class="input" placeholder="Tema" required />
-        <input v-model="form.dataDistribuicao" type="date" class="input" required />
-        <input v-model="form.responsavel" class="input" placeholder="Responsável" required />
-        <select v-model="form.status" class="input" required>
-          <option>Em andamento</option>
-          <option>Concluído</option>
-          <option>Arquivado</option>
-        </select>
-        <input v-model="form.ultimaAtualizacao" type="date" class="input" required />
-
-        <!-- PDF -->
-        <input
-          type="file"
-          accept=".pdf"
-          name="pdf"
-          @change="handlePdf"
-          class="input"
-          required
-        />
-
-        <div class="flex justify-end mt-4 gap-2">
-          <button type="button" @click="$emit('close')" class="text-sm text-neutral-500">
+    <div id="modal-novo-processo" class="bg-white rounded-xl shadow-lg w-[400px] max-w-full p-7">
+      <div class="mb-5">
+        <h2 class="text-lg text-neutral-900">Novo Processo</h2>
+      </div>
+      <form @submit.prevent="submit" class="space-y-4">
+        <div>
+          <label class="block text-sm text-neutral-500 mb-1">Número do Processo</label>
+          <input
+            v-model="form.numeroProcesso"
+            type="text"
+            class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
+            placeholder="Digite o número"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-neutral-500 mb-1">Tema</label>
+          <input
+            v-model="form.tema"
+            type="text"
+            class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
+            placeholder="Digite o tema"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-neutral-500 mb-1">Data de abertura</label>
+          <div class="relative">
+            <input
+              v-model="form.dataDistribuicao"
+              type="date"
+              class="w-full border border-neutral-200 rounded-md px-3 py-2 pr-9 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
+              required
+            />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+              <i class="fa-regular fa-calendar"></i>
+            </span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-neutral-500 mb-1">Responsável</label>
+          <input
+            v-model="form.responsavel"
+            type="text"
+            class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
+            placeholder="Digite o responsável"
+            required
+          />
+        </div>
+        <div class="flex space-x-2">
+          <div class="w-1/2">
+            <label class="block text-sm text-neutral-500 mb-1">Status</label>
+            <select
+              v-model="form.status"
+              class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
+              required
+            >
+              <option>Em andamento</option>
+              <option>Aberto</option>
+              <option>Concluído</option>
+            </select>
+          </div>
+          <div class="w-1/2">
+            <label class="block text-sm text-neutral-500 mb-1">Data status</label>
+            <div class="relative">
+              <input
+                v-model="form.ultimaAtualizacao"
+                type="date"
+                class="w-full border border-neutral-200 rounded-md px-3 py-2 pr-9 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
+                required
+              />
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                <i class="fa-regular fa-calendar"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-neutral-500 mb-1">Anexo</label>
+          <div class="flex items-center space-x-3">
+            <input
+              type="file"
+              accept=".pdf"
+              name="pdf"
+              @change="handlePdf"
+              class="cursor-pointer border border-neutral-300 rounded-md px-3 py-1 text-sm file:bg-neutral-100 file:border-0 file:mr-2 file:rounded file:px-3 file:py-1 file:text-neutral-700"
+              required
+            />
+            <span class="text-xs text-neutral-500 truncate">
+              {{ arquivoPdf?.name || 'Nenhum arquivo escolhido' }}
+            </span>
+          </div>
+        </div>
+        <div class="flex justify-end space-x-3 pt-2">
+          <button
+            type="button"
+            @click="$emit('close')"
+            class="text-neutral-500 px-4 py-2 rounded-md hover:bg-neutral-100"
+          >
             Cancelar
           </button>
-          <button type="submit" class="bg-neutral-900 text-white px-4 py-2 rounded">
+          <button type="submit" class="bg-neutral-900 text-white px-5 py-2 rounded-md hover:bg-neutral-800">
             Salvar
           </button>
         </div>
@@ -72,9 +146,7 @@ async function submit() {
       return
     }
 
-    console.log('pegando o md')
     const markdown = await pdfToMarkdown(arquivoPdf.value)
-    console.log('passando aqui')
     const payload = {
       ...form.value,
       markdown
@@ -91,7 +163,6 @@ async function submit() {
       throw new Error(error.error || 'Erro ao enviar dados')
     }
 
-    // Reset form
     form.value = {
       numeroProcesso: '',
       tema: '',
@@ -105,14 +176,7 @@ async function submit() {
     emit('added')
     emit('close')
   } catch (err) {
-    console.error('Erro ao enviar dados:', err)
     alert('Erro ao salvar processo e markdown.')
   }
 }
 </script>
-
-<style scoped>
-.input {
-  @apply w-full border px-3 py-2 rounded mb-2 text-sm;
-}
-</style>
