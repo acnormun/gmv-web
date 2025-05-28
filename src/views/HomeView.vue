@@ -1,6 +1,6 @@
 <template>
   <main>
-    <div class="container mx-auto px-2 py-6">
+    <div class="container mx-auto py-6">
       <AddTriagem
         :open="showModal"
         @close="showModal = false"

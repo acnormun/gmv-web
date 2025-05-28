@@ -63,14 +63,24 @@
         </div>
         <div>
           <label class="block text-sm text-neutral-500 mb-1">Responsável</label>
-          <input
+          <select
             v-model="form.responsavel"
-            type="text"
             class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
-            placeholder="Digite o responsável"
             required
-          />
+          >
+            <option disabled value="">Selecione o responsável</option>
+            <option>LOURIVAL</option>
+            <option>NAIRA</option>
+            <option>NATÁLIA</option>
+            <option>JUSSARA</option>
+            <option>LEISI</option>
+            <option>JORDAM</option>
+            <option>RAQUEL</option>
+            <option>FERNANDA</option>
+            <option>VANUCE</option>
+          </select>
         </div>
+
         <div class="flex space-x-2">
           <div class="w-1/2">
             <label class="block text-sm text-neutral-500 mb-1">Status</label>
@@ -118,6 +128,15 @@
             </span>
           </div>
         </div>
+        <div>
+          <label class="block text-sm text-neutral-500 mb-1">Comentários</label>
+          <textarea
+            v-model="form.comentarios"
+            rows="3"
+            class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-300 text-neutral-900"
+            placeholder="Observações, detalhes relevantes etc."
+          ></textarea>
+        </div>
         <div class="flex justify-end space-x-3 pt-2">
           <button
             type="button"
@@ -151,9 +170,9 @@ const form = ref({
   dataDistribuicao: '',
   responsavel: '',
   status: 'Em andamento',
-  ultimaAtualizacao: ''
+  ultimaAtualizacao: '',
+  comentarios: '',
 })
-
 
 const arquivoPdf = ref<File | null>(null)
 
@@ -195,6 +214,7 @@ async function submit() {
       responsavel: '',
       status: 'Em andamento',
       ultimaAtualizacao: '',
+      comentarios: '',
     }
     arquivoPdf.value = null
 
