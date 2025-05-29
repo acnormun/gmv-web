@@ -12,17 +12,12 @@ pdfjsLib.GlobalWorkerOptions.workerPort = new pdfjsWorker()
  * @returns Texto convertido em Markdown
  */
 export async function pdfToMarkdown(file: File): Promise<string> {
-  console.log('📥 Iniciando leitura do arquivo PDF...')
 
   const arrayBuffer = await file.arrayBuffer()
-  console.log('✅ Buffer carregado')
-
   let pdf
   try {
     pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-    console.log('✅ Documento PDF carregado:', pdf.numPages, 'páginas')
   } catch (error) {
-    console.error('❌ Erro ao carregar PDF:', error)
     throw new Error('Falha ao processar o PDF')
   }
 
@@ -35,12 +30,8 @@ export async function pdfToMarkdown(file: File): Promise<string> {
     text += pageText + '\n\n'
   }
 
-  console.log('✅ Texto extraído. Convertendo para Markdown...')
-
   const turndown = new TurndownService()
   const markdown = turndown.turndown(text)
-
-  console.log('✅ Conversão para Markdown concluída.')
 
   return markdown
 }
