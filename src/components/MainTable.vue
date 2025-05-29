@@ -9,14 +9,19 @@
             <span>Exportar</span>
           </button>
           <button
-            @click="showModal = true"
+            @click="abrirNovo"
             class="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800"
           >
             <img src="@/assets/plus-solid.svg" class="w-4 h-4" />
             Novo Processo
           </button>
 
-          <AddTriagem :open="showModal" @close="showModal = false" @added="solicitarAtualizacao" />
+          <AddTriagem
+            :open="showModal"
+            :mode="modalMode"
+            @close="showModal = false"
+            @added="solicitarAtualizacao"
+          />
         </div>
       </div>
 
@@ -48,16 +53,38 @@
                 </span>
               </td>
               <td class="py-3 px-4">{{ item.ultimaAtualizacao }}</td>
-              <td class="py-3 px-4">
-                <button class="text-neutral-600 hover:text-neutral-900 mr-2">
+              <td class="py-3 px-4 relative">
+                <button
+                  class="text-neutral-600 hover:text-neutral-900 mr-2"
+                  @click="abrirModal('view', item)"
+                >
                   <i class="fa-solid fa-eye"></i>
                 </button>
-                <button class="text-neutral-600 hover:text-neutral-900 mr-2">
-                  <i class="fa-solid fa-download"></i>
+                <button
+                  class="text-neutral-600 hover:text-neutral-900 mr-2"
+                  @click="toggleMenu(index)"
+                >
+                  <i class="fa-solid fa-ellipsis-vertical">...</i>
                 </button>
-                <button class="text-neutral-600 hover:text-neutral-900">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
+
+                <!-- Menu suspenso -->
+                <div
+                  v-if="menuAberto === index"
+                  class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-md z-10"
+                >
+                  <button
+                    @click="abrirModal('edit', item)"
+                    class="block w-full text-left text-sm px-4 py-2 hover:bg-neutral-100"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    @click="excluir(item)"
+                    class="block w-full text-left text-sm px-4 py-2 text-red-600 hover:bg-neutral-100"
+                  >
+                    Excluir
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -75,8 +102,13 @@
 import { ref, computed } from 'vue'
 import AddTriagem from './AddTriagem.vue'
 import type { Processo } from '@/api/triagem'
+import { useTriagemStore } from '@/stores/triagem.store'
+import { deleteProcesso } from '@/api/triagem'
 
+const store = useTriagemStore()
 const showModal = ref(false)
+const modalMode = ref<'new' | 'view' | 'edit'>('new')
+const menuAberto = ref<number | null>(null)
 
 const emit = defineEmits(['refresh'])
 
@@ -88,6 +120,37 @@ const lista = computed(() => props.data)
 
 function solicitarAtualizacao() {
   emit('refresh')
+}
+
+function abrirNovo() {
+  store.limparSelecionado()
+  modalMode.value = 'new'
+  showModal.value = true
+}
+
+function abrirModal(mode: 'view' | 'edit', processo: Processo) {
+  store.selecionarProcesso(processo)
+  modalMode.value = mode
+  showModal.value = true
+  menuAberto.value = null
+}
+
+function toggleMenu(index: number) {
+  menuAberto.value = menuAberto.value === index ? null : index
+}
+
+async function excluir(processo: Processo) {
+  const confirmacao = confirm(`Tem certeza que deseja excluir o processo ${processo.numeroProcesso}?`)
+  if (!confirmacao) return
+
+  try {
+    await deleteProcesso(processo.numeroProcesso)
+    solicitarAtualizacao()
+  } catch (err) {
+    alert('Erro ao excluir processo.')
+  } finally {
+    menuAberto.value = null
+  }
 }
 
 function statusPillClass(status: string): string {
@@ -105,3 +168,4 @@ function statusPillClass(status: string): string {
   }
 }
 </script>
+
