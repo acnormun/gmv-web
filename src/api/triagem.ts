@@ -23,9 +23,9 @@ export async function addProcesso(processo: Processo): Promise<void> {
   const res = await fetch(`${API_BASE}/triagem/form`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(processo)
+    body: JSON.stringify(processo),
   })
 
   if (!res.ok) {
@@ -34,13 +34,16 @@ export async function addProcesso(processo: Processo): Promise<void> {
   }
 }
 
-export async function updateProcesso(numeroAntigo: string, processoAtualizado: Processo): Promise<void> {
+export async function updateProcesso(
+  numeroAntigo: string,
+  processoAtualizado: Processo,
+): Promise<void> {
   const res = await fetch(`${API_BASE}/triagem/${numeroAntigo}`, {
     method: 'PUT',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(processoAtualizado)
+    body: JSON.stringify(processoAtualizado),
   })
 
   if (!res.ok) {
@@ -51,11 +54,22 @@ export async function updateProcesso(numeroAntigo: string, processoAtualizado: P
 
 export async function deleteProcesso(numero: string): Promise<void> {
   const res = await fetch(`${API_BASE}/triagem/${numero}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   })
 
   if (!res.ok) {
     const error = await res.json()
     throw new Error(error.message || 'Erro ao excluir processo')
   }
+}
+
+export async function getProcesso(numero: number | string) {
+  const res = await fetch(`${API_BASE}/triagem/${numero}/dat`, {
+    method: 'GET',
+  })
+  const { base64 } = await res.json()
+
+  const blob = await (await fetch(`data:application/pdf;base64,${base64}`)).blob()
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
 }

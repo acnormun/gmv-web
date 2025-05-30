@@ -159,6 +159,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { pdfToMarkdown } from '@/utils/pdfToMarkdown'
+import { pdfToDat } from '@/utils/pdfToDat'
 import { useTriagemStore } from '@/stores/triagem.store'
 import { addProcesso, updateProcesso } from '@/api/triagem'
 
@@ -252,13 +253,16 @@ function handlePdf(event: Event) {
 async function submit() {
   try {
     let markdown = ''
+    let dat = ''
     if (arquivoPdf.value) {
       markdown = await pdfToMarkdown(arquivoPdf.value)
+      dat = await pdfToDat(arquivoPdf.value)
     }
 
     const payload = {
       ...form.value,
       markdown,
+      dat
     }
 
     if (props.mode === 'new') {
