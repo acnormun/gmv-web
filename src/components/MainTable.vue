@@ -4,10 +4,14 @@
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-xl">Processos</h1>
         <div class="flex space-x-2">
-          <button class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50">
+          <button
+            @click="exportarTabelaParaPdf"
+            class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50"
+          >
             <img src="../assets/download-solid.svg" class="h-5 w-5" alt="Exportar" />
             <span>Exportar</span>
           </button>
+
           <button
             @click="abrirNovo"
             class="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800"
@@ -112,6 +116,8 @@ import AddTriagem from './AddTriagem.vue'
 import type { Processo } from '@/api/triagem'
 import { useTriagemStore } from '@/stores/triagem.store'
 import { deleteProcesso, getProcesso } from '@/api/triagem'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const store = useTriagemStore()
 const showModal = ref(false)
@@ -144,7 +150,7 @@ function abrirModal(mode: 'view' | 'edit', processo: Processo) {
   menuAberto.value = null
 }
 
- async function abrirArquivo (processo: Processo){
+async function abrirArquivo(processo: Processo) {
   await getProcesso(processo.numeroProcesso)
 }
 
@@ -184,6 +190,30 @@ async function excluir(processo: Processo) {
   } finally {
     menuAberto.value = null
   }
+}
+
+function exportarTabelaParaPdf() {
+  const doc = new jsPDF()
+  
+  autoTable(doc, {
+    head: [[
+      'Nº Processo', 'Tema', 'Data da Distribuição', 
+      'Responsável', 'Status', 'Última Atualização'
+    ]],
+    body: lista.value.map(item => [
+      item.numeroProcesso,
+      item.tema,
+      item.dataDistribuicao,
+      item.responsavel,
+      item.status,
+      item.ultimaAtualizacao,
+    ]),
+    margin: { top: 20 },
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [0, 0, 0] },
+  })
+
+  doc.save('processos.pdf')
 }
 
 function statusPillClass(status: string): string {
