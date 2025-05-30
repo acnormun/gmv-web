@@ -58,38 +58,40 @@
                   class="text-neutral-600 hover:text-neutral-900 mr-2"
                   @click="abrirModal('view', item)"
                 >
-                  <i class="fa-solid fa-eye"></i>
+                  <img src="@/assets/eye-solid.svg" class="w-4 h-4" />
                 </button>
                 <button
                   class="text-neutral-600 hover:text-neutral-900 mr-2"
-                  @click="toggleMenu(index)"
+                  @click="(e) => toggleMenu(index, e)"
                 >
-                  <i class="fa-solid fa-ellipsis-vertical">...</i>
+                  <img src="@/assets/ellipsis-vertical-solid.svg" class="w-4 h-4" />
                 </button>
-
-                <!-- Menu suspenso -->
-                <div
-                  v-if="menuAberto === index"
-                  class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-md z-10"
-                >
-                  <button
-                    @click="abrirModal('edit', item)"
-                    class="block w-full text-left text-sm px-4 py-2 hover:bg-neutral-100"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    @click="excluir(item)"
-                    class="block w-full text-left text-sm px-4 py-2 text-red-600 hover:bg-neutral-100"
-                  >
-                    Excluir
-                  </button>
-                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <teleport to="body">
+        <div
+          v-if="menuAberto !== null"
+          :style="menuEstilo"
+          class="absolute z-50 w-32 bg-white border rounded shadow-md"
+        >
+          <button
+            @click="abrirModal('edit', lista[menuAberto])"
+            class="block w-full text-left text-sm px-4 py-2 hover:bg-neutral-100"
+          >
+            Editar
+          </button>
+          <button
+            @click="excluir(lista[menuAberto])"
+            class="block w-full text-left text-sm px-4 py-2 text-red-600 hover:bg-neutral-100"
+          >
+            Excluir
+          </button>
+        </div>
+      </teleport>
 
       <div class="flex justify-between items-center mt-6">
         <div class="text-sm text-neutral-600">Mostrando {{ lista.length }} resultados</div>
@@ -109,6 +111,7 @@ const store = useTriagemStore()
 const showModal = ref(false)
 const modalMode = ref<'new' | 'view' | 'edit'>('new')
 const menuAberto = ref<number | null>(null)
+const menuPos = ref({ top: 0, left: 0 })
 
 const emit = defineEmits(['refresh'])
 
@@ -135,12 +138,32 @@ function abrirModal(mode: 'view' | 'edit', processo: Processo) {
   menuAberto.value = null
 }
 
-function toggleMenu(index: number) {
-  menuAberto.value = menuAberto.value === index ? null : index
+function toggleMenu(index: number, event: MouseEvent) {
+  if (menuAberto.value === index) {
+    menuAberto.value = null
+    return
+  }
+
+  const button = (event.target as HTMLElement).closest('button')
+  if (button) {
+    const rect = button.getBoundingClientRect()
+    menuPos.value = {
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX,
+    }
+  }
+
+  menuAberto.value = index
 }
 
+const menuEstilo = computed(() => {
+  return `top: ${menuPos.value.top}px; left: ${menuPos.value.left}px;`
+})
+
 async function excluir(processo: Processo) {
-  const confirmacao = confirm(`Tem certeza que deseja excluir o processo ${processo.numeroProcesso}?`)
+  const confirmacao = confirm(
+    `Tem certeza que deseja excluir o processo ${processo.numeroProcesso}?`,
+  )
   if (!confirmacao) return
 
   try {
@@ -168,4 +191,3 @@ function statusPillClass(status: string): string {
   }
 }
 </script>
-
