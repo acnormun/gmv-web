@@ -22,9 +22,10 @@ import { checkFrontendVersion } from '@/utils/checkVersion'
 onMounted(async () => {
   const novaVersao = await checkFrontendVersion()
   if (novaVersao) {
-    alert(`🚀 Nova versão disponível: ${novaVersao}. Atualize a página!`)
+    alert(`🚀 Nova versão do frontend disponível: ${novaVersao}. Atualize a página!`)
   }
 })
+
 </script>
 
 <style scoped>

@@ -6,7 +6,7 @@ export async function checkFrontendVersion(): Promise<string | null> {
   const token = import.meta.env.VITE_GITHUB_TOKEN
   const repoOwner = 'acnormun'
   const repoName = 'gmv-web'
-  const filePath = 'version.json'
+  const filePath = 'public/version.json'
 
   const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`
 
@@ -17,6 +17,12 @@ export async function checkFrontendVersion(): Promise<string | null> {
         Accept: 'application/vnd.github.v3+json',
       },
     })
+
+    if (!res.ok) {
+      console.error('Erro ao buscar versão remota:', res.status, await res.text())
+      return null
+    }
+
     const json = await res.json()
     const remoteContent = atob(json.content)
     const remoteVersion = JSON.parse(remoteContent).version
