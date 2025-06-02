@@ -33,7 +33,7 @@
           <img src="../assets/pencil-solid.svg" class="w-5 h-5"/>
         </div>
         <div>
-          <div class="text-2xl text-neutral-900">{{ abertos }}</div>
+          <div class="text-2xl text-neutral-900">{{ revisao }}</div>
           <div class="text-sm text-neutral-600">Para revisão</div>
         </div>
       </div>
