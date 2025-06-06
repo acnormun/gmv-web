@@ -4,28 +4,15 @@
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-xl">Processos</h1>
         <div class="flex space-x-2">
-          <button
-            @click="exportarTabelaParaPdf"
-            class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50"
-          >
+          <button @click="exportarTabelaParaPdf" class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50">
             <img src="../assets/download-solid.svg" class="h-5 w-5" alt="Exportar" />
             <span>Exportar</span>
           </button>
-
-          <button
-            @click="abrirNovo"
-            class="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800"
-          >
+          <button @click="abrirNovo" class="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800">
             <img src="@/assets/plus-solid.svg" class="w-4 h-4" />
             Novo Processo
           </button>
-
-          <AddTriagem
-            :open="showModal"
-            :mode="modalMode"
-            @close="showModal = false"
-            @added="solicitarAtualizacao"
-          />
+          <AddTriagem :open="showModal" :mode="modalMode" @close="showModal = false" @added="solicitarAtualizacao" />
         </div>
       </div>
 
@@ -43,31 +30,20 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in lista" :key="index" class="border-b hover:bg-neutral-50" :class="item.suspeitos.length > 0 && 'bg-yellow-100'">
+            <tr v-for="(item, index) in processosPaginados" :key="index" class="border-b hover:bg-neutral-50" :class="item.suspeitos.length > 0 && 'bg-yellow-100'">
               <td class="py-3 px-4">{{ item.numeroProcesso }}</td>
               <td class="py-3 px-4">{{ item.tema }}</td>
               <td class="py-3 px-4">{{ item.dataDistribuicao }}</td>
               <td class="py-3 px-4">{{ item.responsavel }}</td>
               <td class="py-3 px-4">
-                <span
-                  class="px-2 py-1 rounded-full text-sm font-medium"
-                  :class="statusPillClass(item.status)"
-                >
-                  {{ item.status }}
-                </span>
+                <span class="px-2 py-1 rounded-full text-sm font-medium" :class="statusPillClass(item.status)">{{ item.status }}</span>
               </td>
               <td class="py-3 px-4">{{ item.ultimaAtualizacao }}</td>
               <td class="py-3 px-4 relative">
-                <button
-                  class="text-neutral-600 hover:text-neutral-900 mr-2"
-                  @click="abrirModal('view', item)"
-                >
+                <button class="text-neutral-600 hover:text-neutral-900 mr-2" @click="abrirModal('view', item)">
                   <img src="@/assets/eye-solid.svg" class="w-4 h-4" />
                 </button>
-                <button
-                  class="text-neutral-600 hover:text-neutral-900 mr-2"
-                  @click="(e) => toggleMenu(index, e)"
-                >
+                <button class="text-neutral-600 hover:text-neutral-900 mr-2" @click="(e) => toggleMenu(index, e)">
                   <img src="@/assets/ellipsis-vertical-solid.svg" class="w-4 h-4" />
                 </button>
               </td>
@@ -76,30 +52,17 @@
         </table>
       </div>
 
+      <div class="flex justify-center items-center space-x-2 mt-4">
+        <button @click="paginaAtual--" :disabled="paginaAtual === 1" class="px-3 py-1 border rounded disabled:opacity-40">Anterior</button>
+        <span class="text-sm">Página {{ paginaAtual }} de {{ totalPaginas }}</span>
+        <button @click="paginaAtual++" :disabled="paginaAtual === totalPaginas" class="px-3 py-1 border rounded disabled:opacity-40">Próxima</button>
+      </div>
+
       <teleport to="body">
-        <div
-          v-if="menuAberto !== null"
-          :style="menuEstilo"
-          class="absolute z-50 w-32 bg-white border rounded shadow-md"
-        >
-          <button
-            @click="abrirModal('edit', lista[menuAberto])"
-            class="block w-full text-left text-sm px-4 py-2 hover:bg-neutral-100"
-          >
-            Editar
-          </button>
-          <button
-            @click="abrirArquivo(lista[menuAberto])"
-            class="block w-full text-left text-sm px-4 py-2 hover:bg-neutral-100"
-          >
-            Ver arquivo
-          </button>
-          <button
-            @click="excluir(lista[menuAberto])"
-            class="block w-full text-left text-sm px-4 py-2 text-red-600 hover:bg-neutral-100"
-          >
-            Excluir
-          </button>
+        <div v-if="menuAberto !== null" :style="menuEstilo" class="absolute z-50 w-32 bg-white border rounded shadow-md">
+          <button @click="abrirModal('edit', lista[menuAberto])" class="block w-full text-left text-sm px-4 py-2 hover:bg-neutral-100">Editar</button>
+          <button @click="abrirArquivo(lista[menuAberto])" class="block w-full text-left text-sm px-4 py-2 hover:bg-neutral-100">Ver arquivo</button>
+          <button @click="excluir(lista[menuAberto])" class="block w-full text-left text-sm px-4 py-2 text-red-600 hover:bg-neutral-100">Excluir</button>
         </div>
       </teleport>
 
@@ -111,24 +74,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AddTriagem from './AddTriagem.vue'
 import type { Processo } from '@/api/triagem'
 import { useTriagemStore } from '@/stores/triagem.store'
 import { deleteProcesso, getProcesso } from '@/api/triagem'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { onMounted } from 'vue'
-
-onMounted(() => {
-  console.log('MainTable mounted')
-})
 
 const store = useTriagemStore()
 const showModal = ref(false)
 const modalMode = ref<'new' | 'view' | 'edit'>('new')
 const menuAberto = ref<number | null>(null)
 const menuPos = ref({ top: 0, left: 0 })
+
+const paginaAtual = ref(1)
+const itensPorPagina = 4
 
 const emit = defineEmits(['refresh'])
 
@@ -137,6 +98,16 @@ const props = defineProps<{
 }>()
 
 const lista = computed(() => props.data)
+
+const totalPaginas = computed(() =>
+  Math.ceil(lista.value.length / itensPorPagina)
+)
+
+const processosPaginados = computed(() => {
+  const inicio = (paginaAtual.value - 1) * itensPorPagina
+  const fim = inicio + itensPorPagina
+  return lista.value.slice(inicio, fim)
+})
 
 function solicitarAtualizacao() {
   emit('refresh')
