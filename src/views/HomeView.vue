@@ -112,7 +112,6 @@ function limparFiltros() {
   dadosFiltrados.value = [...store.processos]
 }
 
-
 onMounted(() => {
   atualizarProcessos()
 })
