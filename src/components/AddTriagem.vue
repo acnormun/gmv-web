@@ -18,6 +18,15 @@
       </div>
 
       <form @submit.prevent="submit" class="space-y-4">
+        <div v-if="isView && form?.suspeitos && Array.isArray(form.suspeitos) && form.suspeitos.length > 0" class="text-md text-red-600 mb-1 bg-red-50 p-3">
+          <p class="text-md text-red-600 mb-1 bg-red-50 p-3">
+            ⚠ Atenção! Este processo apresenta nomes em suspeição:
+          </p>
+          <ul class="list-disc list-inside text-sm text-neutral-800">
+            <li v-for="(nome, index) in form.suspeitos" :key="index">{{ nome }}</li>
+          </ul>
+        </div>
+
         <div>
           <label class="block text-sm text-neutral-500 mb-1">Número do Processo</label>
           <input
@@ -181,6 +190,7 @@ const form = ref({
   status: 'Em andamento',
   ultimaAtualizacao: '',
   comentarios: '',
+  suspeitos: []
 })
 
 const isView = computed(() => props.mode === 'view')
@@ -229,12 +239,15 @@ watch(
           status: 'Em andamento',
           ultimaAtualizacao: '',
           comentarios: '',
+          suspeitos: []
         }
         arquivoPdf.value = null
         processoAntigo.value = ''
       } else {
         const processo = store.processoSelecionado
         if (processo) {
+
+         // @ts-ignore
           form.value = { ...processo }
           processoAntigo.value = processo.numeroProcesso
         }
@@ -259,11 +272,14 @@ async function submit() {
       dat = await pdfToDat(arquivoPdf.value)
     }
 
-    const payload = {
-      ...form.value,
-      markdown,
-      dat
-    }
+    const { suspeitos, ...formSemSuspeitos } = form.value
+
+const payload = {
+  ...formSemSuspeitos,
+  markdown,
+  dat
+}
+
 
     if (props.mode === 'new') {
       await addProcesso(payload)
