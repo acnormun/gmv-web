@@ -6,7 +6,8 @@
     >
       <div class="w-full max-w-[1920px] px-6 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <img src="./assets/scale-balanced-solid.svg" class="w-6 h-6" ></img><span class="title text-xl font-semibold text-neutral-800">Gabinete - Márcio Vidal</span>
+          <img src="./assets/scale-balanced-solid.svg" class="w-6 h-6" alt="Gabinete - Márcio Vidal" />
+          <span class="title text-xl font-semibold text-neutral-800">Gabinete - Márcio Vidal</span>
         </div>
       </div>
     </header>
@@ -17,15 +18,10 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import { onMounted } from 'vue'
-import { checkFrontendVersion } from '@/utils/checkVersion'
 
 onMounted(async () => {
-  const novaVersao = await checkFrontendVersion()
-  if (novaVersao) {
-    alert(`🚀 Nova versão do frontend disponível: ${novaVersao}. Atualize a página!`)
-  }
+  console.log('App mounted')
 })
-
 </script>
 
 <style scoped>

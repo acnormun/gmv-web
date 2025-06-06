@@ -118,6 +118,11 @@ import { useTriagemStore } from '@/stores/triagem.store'
 import { deleteProcesso, getProcesso } from '@/api/triagem'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  console.log('MainTable mounted')
+})
 
 const store = useTriagemStore()
 const showModal = ref(false)
@@ -185,7 +190,7 @@ async function excluir(processo: Processo) {
   try {
     await deleteProcesso(processo.numeroProcesso)
     solicitarAtualizacao()
-  } catch (err) {
+  } catch {
     alert('Erro ao excluir processo.')
   } finally {
     menuAberto.value = null
@@ -194,10 +199,10 @@ async function excluir(processo: Processo) {
 
 function exportarTabelaParaPdf() {
   const doc = new jsPDF()
-  
+
   autoTable(doc, {
     head: [[
-      'Nº Processo', 'Tema', 'Data da Distribuição', 
+      'Nº Processo', 'Tema', 'Data da Distribuição',
       'Responsável', 'Status', 'Última Atualização'
     ]],
     body: lista.value.map(item => [
