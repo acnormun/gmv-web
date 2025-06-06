@@ -1,4 +1,5 @@
-export interface Processo {
+
+export interface ProcessoForm {
   numeroProcesso: string
   tema: string
   dataDistribuicao: string
@@ -6,7 +7,10 @@ export interface Processo {
   status: string
   ultimaAtualizacao: string
   comentarios: string
-  markdown?: string // usado apenas para envio
+  markdown?: string
+}
+export interface Processo extends ProcessoForm {
+  suspeitos: Array<string | null> | string
 }
 
 const API_BASE = 'http://localhost:5000'
@@ -19,7 +23,7 @@ export async function getProcessos(): Promise<Processo[]> {
   return await res.json()
 }
 
-export async function addProcesso(processo: Processo): Promise<void> {
+export async function addProcesso(processo: ProcessoForm): Promise<void> {
   const res = await fetch(`${API_BASE}/triagem/form`, {
     method: 'POST',
     headers: {
@@ -36,7 +40,7 @@ export async function addProcesso(processo: Processo): Promise<void> {
 
 export async function updateProcesso(
   numeroAntigo: string,
-  processoAtualizado: Processo,
+  processoAtualizado: ProcessoForm,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/triagem/${numeroAntigo}`, {
     method: 'PUT',
