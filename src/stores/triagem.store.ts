@@ -14,14 +14,14 @@ export const useTriagemStore = defineStore('triagem', () => {
         if (typeof item.suspeitos === 'string') {
           item.suspeitos = JSON.parse(item.suspeitos.replace(/'/g, '"'));
         }
+        if(item.comentarios === 'nan') item.comentarios = ''
       } catch (e) {
         console.warn('Erro ao parsear suspeitos:', item.suspeitos, e);
-        item.suspeitos = []; // fallback seguro
+        item.suspeitos = [];
       }
       return item;
     })
   );
-  console.log('DATA: ', data);
   processos.value = data;
 }
 

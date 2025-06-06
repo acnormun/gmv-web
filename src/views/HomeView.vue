@@ -10,7 +10,7 @@
 
       <div class="grid grid-cols-12 gap-6">
         <div class="col-span-3">
-          <SideBar @apply="filtrarProcessos" />
+          <SideBar @apply="filtrarProcessos" @clearFilters="limparFiltros" />
         </div>
 
         <div class="col-span-9 space-y-6">
@@ -102,10 +102,16 @@ function filtrarProcessos(filtros: Record<string, any>) {
       (!filtros.responsavel ||
         proc.responsavel.toLowerCase().includes(filtros.responsavel.toLowerCase())) &&
       (!filtros.status || proc.status === filtros.status) &&
-      (!filtros.ultimaAtualizacao || proc.ultimaAtualizacao === filtros.ultimaAtualizacao)
+      (!filtros.ultimaAtualizacao || proc.ultimaAtualizacao === filtros.ultimaAtualizacao)&&
+      (!filtros.suspeitos || proc.suspeitos.length >0)
     )
   })
 }
+
+function limparFiltros() {
+  dadosFiltrados.value = [...store.processos]
+}
+
 
 onMounted(() => {
   atualizarProcessos()

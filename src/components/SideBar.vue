@@ -66,11 +66,28 @@
             class="w-full border rounded-md px-3 py-2"
           />
         </div>
+        <div>
+          <label class="flex items-center space-x-2 text-sm text-neutral-700">
+            <input
+              type="checkbox"
+              v-model="filtros.suspeitos"
+              class="text-neutral-900 focus:ring-neutral-500 rounded"
+            />
+            <span>Somente com suspeição</span>
+          </label>
+        </div>
+
         <button
           @click="emitirFiltros"
           class="w-full bg-neutral-900 text-white py-2 rounded-md hover:bg-neutral-800"
         >
           Aplicar Filtros
+        </button>
+        <button
+          @click="emit('clearFilters')"
+          class="text-sm text-neutral-500 hover:text-neutral-800 underline"
+        >
+          Limpar filtros
         </button>
       </div>
     </div>
@@ -79,7 +96,7 @@
 
 <script setup lang="ts">
 import { reactive } from 'vue'
-const emit = defineEmits(['apply'])
+const emit = defineEmits(['apply', 'clearFilters'])
 
 const temas = [
   'CÍVEL',
@@ -106,6 +123,7 @@ const filtros = reactive({
   responsavel: '',
   status: '',
   ultimaAtualizacao: '',
+  suspeitos: false,
 })
 
 const emitirFiltros = () => {

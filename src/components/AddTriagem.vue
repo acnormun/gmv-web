@@ -18,7 +18,12 @@
       </div>
 
       <form @submit.prevent="submit" class="space-y-4">
-        <div v-if="isView && form?.suspeitos && Array.isArray(form.suspeitos) && form.suspeitos.length > 0" class="text-md text-red-600 mb-1 bg-red-50 p-3">
+        <div
+          v-if="
+            isView && form?.suspeitos && Array.isArray(form.suspeitos) && form.suspeitos.length > 0
+          "
+          class="text-md text-red-600 mb-1 bg-red-50 p-3"
+        >
           <p class="text-md text-red-600 mb-1 bg-red-50 p-3">
             ⚠ Atenção! Este processo apresenta nomes em suspeição:
           </p>
@@ -155,9 +160,14 @@
           <button
             v-if="mode !== 'view'"
             type="submit"
-            class="bg-neutral-900 text-white px-5 py-2 rounded-md hover:bg-neutral-800"
+            :disabled="loading"
+            class="bg-neutral-900 text-white px-5 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center gap-2"
           >
-            Salvar
+            <span
+              v-if="loading"
+              class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"
+            ></span>
+            <span>Salvar</span>
           </button>
         </div>
       </form>
@@ -181,6 +191,7 @@ const emit = defineEmits(['close', 'added'])
 const store = useTriagemStore()
 const arquivoPdf = ref<File | null>(null)
 const processoAntigo = ref('')
+const loading = ref(false)
 
 const form = ref({
   numeroProcesso: '',
@@ -190,7 +201,7 @@ const form = ref({
   status: 'Em andamento',
   ultimaAtualizacao: '',
   comentarios: '',
-  suspeitos: []
+  suspeitos: [],
 })
 
 const isView = computed(() => props.mode === 'view')
@@ -239,15 +250,14 @@ watch(
           status: 'Em andamento',
           ultimaAtualizacao: '',
           comentarios: '',
-          suspeitos: []
+          suspeitos: [],
         }
         arquivoPdf.value = null
         processoAntigo.value = ''
       } else {
         const processo = store.processoSelecionado
         if (processo) {
-
-         // @ts-ignore
+          // @ts-ignore
           form.value = { ...processo }
           processoAntigo.value = processo.numeroProcesso
         }
@@ -264,6 +274,7 @@ function handlePdf(event: Event) {
 }
 
 async function submit() {
+  loading.value = true;
   try {
     let markdown = ''
     let dat = ''
@@ -274,12 +285,11 @@ async function submit() {
 
     const { suspeitos, ...formSemSuspeitos } = form.value
 
-const payload = {
-  ...formSemSuspeitos,
-  markdown,
-  dat
-}
-
+    const payload = {
+      ...formSemSuspeitos,
+      markdown,
+      dat,
+    }
 
     if (props.mode === 'new') {
       await addProcesso(payload)
@@ -292,5 +302,6 @@ const payload = {
   } catch (err) {
     alert('Erro ao salvar processo.')
   }
+  loading.value = false
 }
 </script>
