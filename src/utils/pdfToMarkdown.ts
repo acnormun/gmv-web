@@ -1,10 +1,10 @@
 import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?worker'
+import workerSrc from 'pdfjs-dist/build/pdf.worker.js?url'
 // @ts-ignore
 import TurndownService from 'turndown'
 
 // Linka o worker corretamente para Vite/Webpack
-pdfjsLib.GlobalWorkerOptions.workerPort = new pdfjsWorker()
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
 
 /**
  * Converte um arquivo PDF em Markdown
