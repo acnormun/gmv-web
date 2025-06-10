@@ -30,7 +30,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in processosPaginados" :key="index" class="border-b hover:bg-neutral-50" :class="item.suspeitos.length > 0 && 'bg-yellow-100'">
+            <tr v-for="(item, index) in processosPaginados" :key="index" class="border-b hover:bg-neutral-50" :class="item.suspeitos?.length > 0 && 'bg-yellow-100'">
               <td class="py-3 px-4">{{ item.numeroProcesso }}</td>
               <td class="py-3 px-4">{{ item.tema }}</td>
               <td class="py-3 px-4">{{ item.dataDistribuicao }}</td>
