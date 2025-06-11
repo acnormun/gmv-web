@@ -57,7 +57,7 @@
         </div>
 
         <div>
-          <label class="block text-sm text-neutral-500 mb-1">Data de abertura</label>
+          <label class="block text-sm text-neutral-500 mb-1">Data da Distribuição</label>
           <div class="relative">
             <input
               v-model="form.dataDistribuicao"
@@ -67,7 +67,7 @@
               required
             />
             <span
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+              class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400"
             >
               <i class="fa-regular fa-calendar"></i>
             </span>
@@ -87,39 +87,22 @@
           </select>
         </div>
 
-        <div class="flex space-x-2">
-          <div class="w-1/2">
-            <label class="block text-sm text-neutral-500 mb-1">Status</label>
-            <select
-              v-model="form.status"
-              :disabled="isView"
-              class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-300"
-              required
-            >
-              <option>Aberto</option>
-              <option>Em andamento</option>
-              <option>Para revisão</option>
-              <option>Concluído</option>
-            </select>
-          </div>
-          <div class="w-1/2">
-            <label class="block text-sm text-neutral-500 mb-1">Data status</label>
-            <div class="relative">
-              <input
-                v-model="form.ultimaAtualizacao"
-                type="date"
-                :disabled="isView"
-                class="w-full border border-neutral-200 rounded-md px-3 py-2 pr-9 bg-neutral-50 text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-300"
-                required
-              />
-              <span
-                class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400"
-              >
-                <i class="fa-regular fa-calendar"></i>
-              </span>
-            </div>
-          </div>
+        <div>
+          <label class="block text-sm text-neutral-500 mb-1">Status</label>
+          <select
+            v-model="form.status"
+            :disabled="isView"
+            class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-300"
+            required
+          >
+            <option>Aberto</option>
+            <option>Em andamento</option>
+            <option>Para revisão</option>
+            <option>Concluído</option>
+          </select>
         </div>
+
+        <!-- Campo removido: Última Atualização será setada automaticamente pelo backend -->
 
         <div>
           <label class="block text-sm text-neutral-500 mb-1">Anexo</label>
@@ -147,6 +130,12 @@
             class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-300"
             placeholder="Observações, detalhes relevantes etc."
           ></textarea>
+        </div>
+
+        <!-- Debug info (apenas em modo de desenvolvimento) -->
+        <div v-if="debugMode" class="text-xs bg-gray-100 p-2 rounded">
+          <div><strong>Form Data:</strong></div>
+          <pre>{{ JSON.stringify(form, null, 2) }}</pre>
         </div>
 
         <div class="flex justify-end space-x-3 pt-2">
@@ -192,16 +181,25 @@ const store = useTriagemStore()
 const arquivoPdf = ref<File | null>(null)
 const processoAntigo = ref('')
 const loading = ref(false)
+const debugMode = ref(false) // Para debug, pode ser removido em produção
 
-const form = ref({
+// Formulário sem campo ultimaAtualizacao
+const form = ref<{
+  numeroProcesso: string
+  tema: string
+  dataDistribuicao: string
+  responsavel: string
+  status: string
+  comentarios: string
+  suspeitos: string[]
+}>({
   numeroProcesso: '',
   tema: '',
   dataDistribuicao: '',
   responsavel: '',
   status: 'Em andamento',
-  ultimaAtualizacao: '',
   comentarios: '',
-  suspeitos: [],
+  suspeitos: [], // Apenas para visualização
 })
 
 const isView = computed(() => props.mode === 'view')
@@ -242,13 +240,13 @@ watch(
   (aberto) => {
     if (aberto) {
       if (props.mode === 'new') {
+        // Reseta formulário para novo processo
         form.value = {
           numeroProcesso: '',
           tema: '',
           dataDistribuicao: '',
           responsavel: '',
           status: 'Em andamento',
-          ultimaAtualizacao: '',
           comentarios: '',
           suspeitos: [],
         }
@@ -257,8 +255,13 @@ watch(
       } else {
         const processo = store.processoSelecionado
         if (processo) {
-          // @ts-ignore
-          form.value = { ...processo }
+          const { ultimaAtualizacao, ...processoSemUltimaAtt } = processo
+          form.value = { 
+            ...processoSemUltimaAtt,
+            suspeitos: Array.isArray(processo.suspeitos)
+              ? processo.suspeitos.filter((s): s is string => typeof s === 'string')
+              : []
+          }
           processoAntigo.value = processo.numeroProcesso
         }
       }
@@ -274,11 +277,14 @@ function handlePdf(event: Event) {
 }
 
 async function submit() {
-  loading.value = true;
+  loading.value = true
+  
   try {
     let markdown = ''
     let dat = ''
+    
     if (arquivoPdf.value) {
+      console.log('📄 Processando PDF:', arquivoPdf.value.name)
       markdown = await pdfToMarkdown(arquivoPdf.value)
       dat = await pdfToDat(arquivoPdf.value)
     }
@@ -287,21 +293,28 @@ async function submit() {
 
     const payload = {
       ...formSemSuspeitos,
+      ultimaAtualizacao: new Date().toISOString(),
       markdown,
       dat,
     }
 
+    console.log('📤 Enviando payload:', payload)
+
     if (props.mode === 'new') {
       await addProcesso(payload)
+      console.log('✅ Processo criado com sucesso')
     } else if (props.mode === 'edit') {
       await updateProcesso(processoAntigo.value, payload)
+      console.log('✅ Processo atualizado com sucesso')
     }
 
     emit('added')
     emit('close')
   } catch (err) {
+    console.error('❌ Erro ao salvar processo:', err)
     alert('Erro ao salvar processo.')
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 </script>

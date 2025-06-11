@@ -1,6 +1,6 @@
 <template>
-  <main>
-    <div class="container mx-auto py-6">
+  <main class="min-h-screen bg-[#F9FAFB]">
+    <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-3 py-6">
       <AddTriagem
         :open="showModal"
         mode="new"
@@ -8,12 +8,12 @@
         @added="atualizarProcessos"
       />
 
-      <div class="grid grid-cols-12 gap-6">
-        <div class="col-span-3">
+      <div class="grid grid-cols-12 gap-4 lg:gap-6">
+        <div class="col-span-12 lg:col-span-3">
           <SideBar @apply="filtrarProcessos" @clearFilters="limparFiltros" />
         </div>
 
-        <div class="col-span-9 space-y-6">
+        <div class="col-span-12 lg:col-span-9 space-y-4 lg:space-y-6">
           <Dashboard
             :emAndamento="emAndamento"
             :abertos="abertos"
@@ -102,8 +102,8 @@ function filtrarProcessos(filtros: Record<string, any>) {
       (!filtros.responsavel ||
         proc.responsavel.toLowerCase().includes(filtros.responsavel.toLowerCase())) &&
       (!filtros.status || proc.status === filtros.status) &&
-      (!filtros.ultimaAtualizacao || proc.ultimaAtualizacao === filtros.ultimaAtualizacao)&&
-      (!filtros.suspeitos || proc.suspeitos.length >0)
+      (!filtros.ultimaAtualizacao || proc.ultimaAtualizacao === filtros.ultimaAtualizacao) &&
+      (!filtros.suspeitos || proc.suspeitos.length > 0)
     )
   })
 }
