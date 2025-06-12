@@ -1,6 +1,6 @@
 <template>
-  <main class="min-h-screen bg-[#F9FAFB]">
-    <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-3 py-6">
+  <main>
+    <div class="container mx-auto py-6">
       <AddTriagem
         :open="showModal"
         mode="new"
@@ -8,17 +8,18 @@
         @added="atualizarProcessos"
       />
 
-      <div class="grid grid-cols-12 gap-4 lg:gap-6">
-        <div class="col-span-12 lg:col-span-3">
+      <div class="grid grid-cols-12 gap-6">
+        <div class="col-span-3">
           <SideBar @apply="filtrarProcessos" @clearFilters="limparFiltros" />
         </div>
 
-        <div class="col-span-12 lg:col-span-9 space-y-4 lg:space-y-6">
+        <div class="col-span-9 space-y-6">
           <Dashboard
             :emAndamento="emAndamento"
             :abertos="abertos"
             :revisao="revisao"
             :concluidos="concluidos"
+            :emAtraso="emAtraso"
             :temasMaisAtuados="temasMaisAtuados"
           />
           <MainTable :data="dadosFiltrados" @refresh="atualizarProcessos" />
@@ -45,6 +46,7 @@ const emAndamento = ref(0)
 const abertos = ref(0)
 const concluidos = ref(0)
 const revisao = ref(0)
+const emAtraso = ref(0)
 
 const icones = {
   'CÍVEL': 'gavel-solid.svg',
@@ -91,24 +93,126 @@ async function atualizarProcessos() {
   abertos.value = store.processos.filter((p) => p.status === 'Aberto').length
   concluidos.value = store.processos.filter((p) => p.status === 'Concluído').length
   revisao.value = store.processos.filter((p) => p.status === 'Para revisão').length
+  emAtraso.value = store.processos.filter((p) => verificarProcessoEmAtraso(p)).length
 }
 
 function filtrarProcessos(filtros: Record<string, any>) {
+  console.log('🔍 Aplicando filtros:', filtros) // Debug
+
   dadosFiltrados.value = store.processos.filter((proc) => {
-    return (
-      (!filtros.numeroProcesso || proc.numeroProcesso.includes(filtros.numeroProcesso)) &&
-      (!filtros.tema?.length || filtros.tema.includes(proc.tema)) &&
-      (!filtros.dataDistribuicao || proc.dataDistribuicao === filtros.dataDistribuicao) &&
-      (!filtros.responsavel ||
-        proc.responsavel.toLowerCase().includes(filtros.responsavel.toLowerCase())) &&
-      (!filtros.status || proc.status === filtros.status) &&
-      (!filtros.ultimaAtualizacao || proc.ultimaAtualizacao === filtros.ultimaAtualizacao) &&
-      (!filtros.suspeitos || proc.suspeitos.length > 0)
-    )
+    // Filtro por número do processo
+    const filtroNumero = !filtros.numeroProcesso || 
+      proc.numeroProcesso.toLowerCase().includes(filtros.numeroProcesso.toLowerCase())
+
+    // Filtro por tema (array)
+    const filtroTema = !filtros.tema?.length || 
+      filtros.tema.includes(proc.tema)
+
+    // Filtro por data de distribuição
+    const filtroDataDistribuicao = !filtros.dataDistribuicao || 
+      proc.dataDistribuicao === filtros.dataDistribuicao
+
+    // Filtro por responsável (array)
+    const filtroResponsavel = !filtros.responsavel?.length || 
+      filtros.responsavel.includes(proc.responsavel)
+
+    // Filtro por status
+    const filtroStatus = !filtros.status || 
+      proc.status === filtros.status
+
+    // Filtro por última atualização
+    const filtroUltimaAtualizacao = !filtros.ultimaAtualizacao || 
+      proc.ultimaAtualizacao === filtros.ultimaAtualizacao
+
+    // Filtro por suspeitos
+    const filtroSuspeitos = !filtros.suspeitos || 
+      (proc.suspeitos && proc.suspeitos.length > 0)
+
+    // Filtro por tipo de atraso
+    const filtroTipoAtraso = !filtros.tipoAtraso || verificarTipoAtraso(proc, filtros.tipoAtraso)
+
+    const resultado = filtroNumero && 
+                     filtroTema && 
+                     filtroDataDistribuicao && 
+                     filtroResponsavel && 
+                     filtroStatus && 
+                     filtroUltimaAtualizacao && 
+                     filtroSuspeitos &&
+                     filtroTipoAtraso
+
+    return resultado
   })
+
+  console.log('📊 Processos filtrados:', dadosFiltrados.value.length) // Debug
+}
+
+// Função para verificar se um processo está em atraso
+function verificarProcessoEmAtraso(processo: Processo): boolean {
+  // Se já está concluído, não está em atraso
+  if (processo.status === 'Concluído') {
+    return false
+  }
+
+  const hoje = new Date()
+  
+  // Verifica a última atualização (mais de 30 dias)
+  if (processo.ultimaAtualizacao) {
+    const ultimaAtualizacao = new Date(processo.ultimaAtualizacao)
+    const diasSemAtualizacao = Math.floor((hoje.getTime() - ultimaAtualizacao.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (diasSemAtualizacao > 30) {
+      return true
+    }
+  }
+
+  // Verifica a data de distribuição (mais de 60 dias sem conclusão)
+  if (processo.dataDistribuicao) {
+    const dataDistribuicao = new Date(processo.dataDistribuicao)
+    const diasSemConclusao = Math.floor((hoje.getTime() - dataDistribuicao.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (diasSemConclusao > 60) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function verificarTipoAtraso(processo: Processo, tipoAtraso: string): boolean {
+  if (processo.status === 'Concluído') {
+    return false
+  }
+
+  const hoje = new Date()
+  let diasSemAtualizacao = 0
+  let diasSemConclusao = 0
+
+  if (processo.ultimaAtualizacao) {
+    const ultimaAtualizacao = new Date(processo.ultimaAtualizacao)
+    diasSemAtualizacao = Math.floor((hoje.getTime() - ultimaAtualizacao.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  if (processo.dataDistribuicao) {
+    const dataDistribuicao = new Date(processo.dataDistribuicao)
+    diasSemConclusao = Math.floor((hoje.getTime() - dataDistribuicao.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  switch (tipoAtraso) {
+    case 'todos_atraso':
+      return diasSemConclusao >= 15
+    case 'atraso_leve':
+      return (diasSemConclusao >= 10) || (diasSemAtualizacao < 15)
+    case 'atraso_grave':
+      return diasSemConclusao > 30
+    case 'sem_atualizacao':
+      return diasSemAtualizacao > 30
+    default:
+      return true
+  }
 }
 
 function limparFiltros() {
+  console.log('🧹 Limpando filtros') 
   dadosFiltrados.value = [...store.processos]
 }
 
