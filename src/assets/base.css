@@ -42,3 +42,15 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #F9FAFB;
+}
+
+#app {
+  min-height: 100vh;
+  background-color: #F9FAFB;
+}
