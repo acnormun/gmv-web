@@ -8,23 +8,14 @@ export const useTriagemStore = defineStore('triagem', () => {
   const processoSelecionado = ref<Processo | null>(null)
 
   async function carregarProcessos() {
-  const data = await getProcessos().then((result) =>
-    result.map((item) => {
-      try {
-        if (typeof item.suspeitos === 'string') {
-          item.suspeitos = JSON.parse(item.suspeitos.replace(/'/g, '"'));
-        }
-        if(item.comentarios === 'nan') item.comentarios = ''
-      } catch (e) {
-        console.warn('Erro ao parsear suspeitos:', item.suspeitos, e);
-        item.suspeitos = [];
-      }
-      return item;
+    const data = await getProcessos().then(r => {
+      r.forEach(item => {
+        if(item.suspeitos === 'nan') item.suspeitos = ''
+      })
+      return r
     })
-  );
-  processos.value = data;
-}
-
+    processos.value = data
+  }
 
   function filtrar(filtros: Record<string, any>) {
     return processos.value.filter((proc) => {
