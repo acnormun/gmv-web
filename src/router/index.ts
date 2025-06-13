@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ProdutividadeView from '../views/ProdutividadeView.vue'
+import ChatView from '@/views/ChatView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -15,6 +16,11 @@ const router = createRouter({
       name: 'produtividade',
       component: ProdutividadeView,
     },
+    {
+      path: '/ia',
+      name: 'ia',
+      component: ChatView
+    }
   ],
 })
 
