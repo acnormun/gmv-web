@@ -1,324 +1,813 @@
 <template>
-  <main class="h-screen flex flex-col bg-neutral-50">
-    <div class="container mx-auto py-6 flex-1 flex flex-col">
-      <!-- Header -->
-      <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-xl font-semibold text-neutral-900">Assistente de IA</h1>
-            <p class="text-sm text-neutral-500">
-              Converse com nossa IA para análise de processos e documentos
-            </p>
+  <div class="flex flex-col h-screen bg-gray-50">
+    <!-- Header do Chat -->
+    <div class="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 rounded-full" :class="ragStatus.available ? 'bg-green-500' : 'bg-red-500'"></div>
+            <h1 class="text-xl font-semibold text-gray-900">Assistente Inteligente GMV</h1>
           </div>
-          <div class="flex space-x-2">
-            <button
-              @click="limparConversa"
-              class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50 transition-colors"
-            >
-              <img src="../assets/trash-solid.svg" class="h-4 w-4" alt="Limpar" />
-              <span>Limpar Chat</span>
-            </button>
-            <button
-              @click="exportarConversa"
-              class="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-neutral-50 transition-colors"
-            >
-              <img src="../assets/download-solid.svg" class="h-4 w-4" alt="Exportar" />
-              <span>Exportar</span>
-            </button>
+          <div class="text-sm text-gray-500">
+            {{ ragStatus.available ? 'Sistema RAG Online' : 'Sistema RAG Offline' }}
           </div>
         </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow-sm flex-1 flex flex-col overflow-hidden">
-        <div ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
-          <div v-if="mensagens.length === 0" class="text-center py-12">
-            <div
-              class="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4"
-            >
-              <img src="../assets/robot-solid.svg" class="w-8 h-8 text-neutral-400" />
-            </div>
-            <h3 class="text-lg font-medium text-neutral-900 mb-2">Bem-vindo ao Assistente de IA</h3>
-            <p class="text-neutral-600 max-w-md mx-auto">
-              Faça perguntas sobre processos, peça análises de documentos ou solicite relatórios.
-              Estou aqui para ajudar!
-            </p>
-            <div class="mt-6 flex flex-wrap justify-center gap-2">
-              <button
-                v-for="sugestao in sugestoes"
-                :key="sugestao"
-                @click="enviarSugestao(sugestao)"
-                class="px-3 py-2 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
-              >
-                {{ sugestao }}
-              </button>
-            </div>
-          </div>
-          <div
-            v-for="(mensagem, index) in mensagens"
-            :key="index"
-            class="flex gap-4"
-            :class="mensagem.tipo === 'usuario' ? 'justify-end' : 'justify-start'"
+        
+        <div class="flex items-center space-x-3">
+          <!-- Botão de Estatísticas -->
+          <button
+            @click="mostrarEstatisticas = !mostrarEstatisticas"
+            class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            title="Estatísticas do Sistema"
           >
-            <div
-              v-if="mensagem.tipo === 'ia'"
-              class="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center flex-shrink-0"
-            >
-              <img src="../assets/robot-solid.svg" class="w-4 h-4 text-neutral-600" />
-            </div>
-
-            <!-- Message Bubble -->
-            <div
-              class="max-w-3xl rounded-lg px-4 py-3"
-              :class="
-                mensagem.tipo === 'usuario'
-                  ? 'bg-neutral-900 text-white'
-                  : 'bg-neutral-100 text-neutral-900'
-              "
-            >
-              <div
-                class="prose prose-sm max-w-none"
-                v-html="formatarMensagem(mensagem.conteudo)"
-              ></div>
-              <div
-                class="text-xs mt-2 opacity-70"
-                :class="mensagem.tipo === 'usuario' ? 'text-neutral-300' : 'text-neutral-500'"
-              >
-                {{ formatarHorario(mensagem.timestamp) }}
-              </div>
-            </div>
-            <div
-              v-if="mensagem.tipo === 'usuario'"
-              class="w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center flex-shrink-0"
-            >
-              <img src="../assets/user-solid.svg" class="w-4 h-4 text-white" />
-            </div>
-          </div>
-          <div v-if="carregando" class="flex gap-4 justify-start">
-            <div
-              class="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center flex-shrink-0"
-            >
-              <img src="../assets/robot-solid.svg" class="w-4 h-4 text-neutral-600" />
-            </div>
-            <div class="bg-neutral-100 rounded-lg px-4 py-3">
-              <div class="flex space-x-1">
-                <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce"></div>
-                <div
-                  class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce"
-                  style="animation-delay: 0.1s"
-                ></div>
-                <div
-                  class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce"
-                  style="animation-delay: 0.2s"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="border-t border-neutral-200 p-4">
-          <form @submit.prevent="enviarMensagem" class="flex gap-3">
-            <div class="flex-1 relative">
-              <textarea
-                v-model="novaMensagem"
-                @keydown.enter.prevent="enviarMensagem"
-                @keydown.shift.enter.prevent="novaMensagem += '\n'"
-                placeholder="Digite sua mensagem... (Enter para enviar, Shift+Enter para nova linha)"
-                class="w-full border border-neutral-200 rounded-md px-4 py-3 pr-12 resize-none focus:outline-none focus:ring-1 focus:ring-neutral-300"
-                rows="1"
-                style="min-height: 44px; max-height: 120px"
-                :disabled="carregando"
-              ></textarea>
-              <button
-                type="button"
-                @click="anexarArquivo"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
-                title="Anexar arquivo"
-              >
-                <img src="../assets/paperclip-solid.svg" class="w-4 h-4" />
-              </button>
-            </div>
-            <button
-              type="submit"
-              :disabled="!novaMensagem.trim() || carregando"
-              class="px-4 py-3 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              <img
-                src="../assets/paper-plane-solid.svg"
-                class="w-4 h-4"
-                :class="carregando && 'animate-pulse'"
-              />
-              <span class="hidden sm:inline">{{ carregando ? 'Enviando...' : 'Enviar' }}</span>
-            </button>
-          </form>
-
-          <input
-            ref="fileInput"
-            type="file"
-            @change="processarArquivo"
-            accept=".pdf,.doc,.docx,.txt"
-            class="hidden"
-          />
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </button>
+          
+          <!-- Botão de Limpar Chat -->
+          <button
+            @click="limparChat"
+            class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            title="Limpar Conversa"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
-  </main>
+
+    <!-- Painel de Estatísticas (Colapsável) -->
+    <div v-if="mostrarEstatisticas && estatisticas" class="bg-blue-50 border-b border-blue-200 px-6 py-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+          <div class="text-2xl font-bold text-blue-600">{{ estatisticas.total_documents || 0 }}</div>
+          <div class="text-sm text-gray-600">Documentos</div>
+        </div>
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+          <div class="text-2xl font-bold text-green-600">{{ estatisticas.total_chunks || 0 }}</div>
+          <div class="text-sm text-gray-600">Chunks</div>
+        </div>
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+          <div class="text-2xl font-bold text-purple-600">{{ estatisticas.cache_size || 0 }}</div>
+          <div class="text-sm text-gray-600">Cache</div>
+        </div>
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+          <div class="text-2xl font-bold text-orange-600">{{ Object.keys(estatisticas.tema_distribution || {}).length }}</div>
+          <div class="text-sm text-gray-600">Temas</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Área de Mensagens -->
+    <div class="flex-1 overflow-hidden flex">
+      <!-- Lista de Mensagens -->
+      <div class="flex-1 flex flex-col">
+        <!-- Scroll das Mensagens -->
+        <div ref="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <!-- Mensagem de Boas-vindas -->
+          <div v-if="mensagens.length === 0" class="text-center py-8">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Olá! Como posso ajudar?</h3>
+            <p class="text-gray-600 mb-4">Faça perguntas sobre os processos, análises ou qualquer informação do sistema GMV.</p>
+            
+            <!-- Sugestões Rápidas -->
+            <div v-if="sugestoes.length > 0" class="max-w-2xl mx-auto">
+              <p class="text-sm text-gray-500 mb-3">Sugestões de consultas:</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <button
+                  v-for="(sugestao, index) in sugestoes.slice(0, 4)"
+                  :key="index"
+                  @click="enviarSugestao(sugestao.query)"
+                  class="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <div class="text-sm font-medium text-gray-900">{{ sugestao.query }}</div>
+                  <div class="text-xs text-gray-500 mt-1">{{ sugestao.category }}</div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mensagens da Conversa -->
+          <div
+            v-for="(mensagem, index) in mensagens"
+            :key="index"
+            class="flex"
+            :class="mensagem.tipo === 'usuario' ? 'justify-end' : 'justify-start'"
+          >
+            <div
+              class="max-w-3xl rounded-lg px-4 py-3"
+              :class="[
+                mensagem.tipo === 'usuario'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border border-gray-200 text-gray-900'
+              ]"
+            >
+              <!-- Avatar e Info -->
+              <div class="flex items-start space-x-3" v-if="mensagem.tipo === 'assistente'">
+                <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center space-x-2 mb-2">
+                    <span class="text-sm font-medium">Assistente GMV</span>
+                    <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                      {{ mensagem.strategy || 'RAG' }}
+                    </span>
+                    <span v-if="mensagem.confidence" class="text-xs text-gray-500">
+                      Confiança: {{ formatarConfianca(mensagem.confidence) }}
+                    </span>
+                  </div>
+                  <div class="prose prose-sm max-w-none" v-html="formatarMensagem(mensagem.conteudo)"></div>
+                  
+                  <!-- Chunks Recuperados (Expandível) -->
+                  <div v-if="mensagem.chunks && mensagem.chunks.length > 0" class="mt-3 border-t pt-3">
+                    <button
+                      @click="mensagem.mostrarChunks = !mensagem.mostrarChunks"
+                      class="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                    >
+                      <span>{{ mensagem.chunks.length }} fonte(s) consultada(s)</span>
+                      <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': mensagem.mostrarChunks }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                      </svg>
+                    </button>
+                    
+                    <div v-if="mensagem.mostrarChunks" class="mt-2 space-y-2">
+                      <div
+                        v-for="(chunk, chunkIndex) in mensagem.chunks.slice(0, 3)"
+                        :key="chunkIndex"
+                        class="bg-gray-50 rounded p-2 text-xs"
+                      >
+                        <div class="flex justify-between items-center mb-1">
+                          <span class="font-medium">{{ chunk.metadata?.document_id || 'Documento' }}</span>
+                          <span class="text-gray-500">Relevância: {{ formatarConfianca(chunk.similarity) }}</span>
+                        </div>
+                        <div class="text-gray-700 line-clamp-3">{{ chunk.content?.substring(0, 150) }}...</div>
+                        <div v-if="chunk.metadata" class="mt-1 text-gray-500">
+                          <span class="inline-block bg-gray-200 rounded px-1 text-xs mr-1">{{ chunk.metadata.tema }}</span>
+                          <span class="inline-block bg-gray-200 rounded px-1 text-xs">{{ chunk.metadata.status }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Mensagem do Usuário -->
+              <div v-else>
+                {{ mensagem.conteudo }}
+              </div>
+              
+              <!-- Timestamp -->
+              <div
+                class="text-xs mt-2 opacity-70"
+                :class="mensagem.tipo === 'usuario' ? 'text-blue-100' : 'text-gray-500'"
+              >
+                {{ formatarHora(mensagem.timestamp) }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Indicador de Digitação -->
+          <div v-if="digitando" class="flex justify-start">
+            <div class="bg-white border border-gray-200 rounded-lg px-4 py-3 max-w-xs">
+              <div class="flex items-center space-x-2">
+                <div class="flex space-x-1">
+                  <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                  <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                </div>
+                <span class="text-sm text-gray-600">Processando...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Área de Input -->
+        <div class="border-t border-gray-200 bg-white px-6 py-4">
+          <form @submit.prevent="enviarMensagem" class="flex space-x-4">
+            <div class="flex-1 relative">
+              <textarea
+                ref="messageInput"
+                v-model="novaMensagem"
+                @keydown.enter.exact.prevent="enviarMensagem"
+                @keydown.enter.shift.exact="novaMensagem += '\n'"
+                placeholder="Digite sua pergunta sobre os processos GMV..."
+                rows="1"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                :disabled="digitando || !ragStatus.available"
+                style="min-height: 48px; max-height: 120px;"
+              ></textarea>
+              
+              <!-- Dica de Atalho -->
+              <div class="absolute bottom-1 right-2 text-xs text-gray-400">
+                Enter para enviar • Shift+Enter para quebra de linha
+              </div>
+            </div>
+            
+            <!-- Botão de Filtros -->
+            <button
+              type="button"
+              @click="mostrarFiltros = !mostrarFiltros"
+              class="px-3 py-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              :class="{ 'bg-blue-50 text-blue-600': filtros.tema || filtros.status }"
+              title="Filtros de busca"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+              </svg>
+            </button>
+            
+            <button
+              type="submit"
+              :disabled="!novaMensagem.trim() || digitando || !ragStatus.available"
+              class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+            >
+              <svg v-if="digitando" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              </svg>
+              <span>{{ digitando ? 'Enviando' : 'Enviar' }}</span>
+            </button>
+          </form>
+          
+          <!-- Barra de Filtros Ativa -->
+          <div v-if="filtros.tema || filtros.status" class="mt-3 flex items-center space-x-2 text-sm">
+            <span class="text-gray-500">Filtros ativos:</span>
+            <span v-if="filtros.tema" class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+              Tema: {{ filtros.tema }}
+              <button @click="filtros.tema = ''" class="ml-1 text-blue-600 hover:text-blue-800">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </span>
+            <span v-if="filtros.status" class="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full">
+              Status: {{ filtros.status }}
+              <button @click="filtros.status = ''" class="ml-1 text-green-600 hover:text-green-800">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel Lateral de Filtros -->
+      <div v-if="mostrarFiltros" class="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-medium text-gray-900">Filtros de Busca</h3>
+          <button @click="mostrarFiltros = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Tema</label>
+            <select v-model="filtros.tema" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="">Todos os temas</option>
+              <option v-for="tema in temasDisponiveis" :key="tema" :value="tema">{{ tema }}</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select v-model="filtros.status" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="">Todos os status</option>
+              <option v-for="status in statusDisponiveis" :key="status" :value="status">{{ status }}</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Número de Resultados</label>
+            <select v-model="filtros.k" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option :value="3">3 resultados</option>
+              <option :value="5">5 resultados</option>
+              <option :value="8">8 resultados</option>
+              <option :value="10">10 resultados</option>
+            </select>
+          </div>
+          
+          <div class="pt-4 border-t">
+            <button
+              @click="aplicarFiltros"
+              class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 mb-2"
+            >
+              Aplicar Filtros
+            </button>
+            
+            <button
+              @click="limparFiltros"
+              class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
+            >
+              Limpar Filtros
+            </button>
+          </div>
+          
+          <!-- Estatísticas dos Filtros -->
+          <div v-if="estatisticas" class="pt-4 border-t">
+            <h4 class="text-sm font-medium text-gray-700 mb-2">Distribuição</h4>
+            
+            <div class="space-y-2">
+              <div>
+                <span class="text-xs text-gray-500">Por Tema:</span>
+                <div class="mt-1 space-y-1">
+                  <div v-for="(count, tema) in Object.entries(estatisticas.tema_distribution).slice(0, 3)" :key="tema" class="flex justify-between text-xs">
+                    <span class="text-gray-700">{{ tema }}</span>
+                    <span class="text-gray-500">{{ count }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <span class="text-xs text-gray-500">Por Status:</span>
+                <div class="mt-1 space-y-1">
+                  <div v-for="(count, status) in Object.entries(estatisticas.status_distribution).slice(0, 3)" :key="status" class="flex justify-between text-xs">
+                    <span class="text-gray-700">{{ status }}</span>
+                    <span class="text-gray-500">{{ count }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
+import { 
+  getRAGStatus, 
+  queryRAG, 
+  searchRAG, 
+  getRAGSuggestions,
+  type RAGResult,
+  type RAGStatus,
+  type RAGStatistics,
+  type RAGSuggestion,
+  formatConfidence,
+  formatProcessingTime,
+  getStrategyColor,
+  validateQuery
+} from '@/api/rag'
+
+// ==========================================
+// 🔧 INTERFACES E TIPOS
+// ==========================================
 
 interface Mensagem {
-  tipo: 'usuario' | 'ia'
+  tipo: 'usuario' | 'assistente'
   conteudo: string
   timestamp: Date
-  arquivos?: string[]
+  strategy?: string
+  confidence?: number
+  chunks?: any[]
+  mostrarChunks?: boolean
 }
+
+// ==========================================
+// 🔧 ESTADO REATIVO
+// ==========================================
 
 const mensagens = ref<Mensagem[]>([])
 const novaMensagem = ref('')
-const carregando = ref(false)
+const digitando = ref(false)
 const messagesContainer = ref<HTMLElement>()
-const fileInput = ref<HTMLInputElement>()
+const messageInput = ref<HTMLTextAreaElement>()
 
-const sugestoes = [
-  'Resumir processos em andamento',
-  'Analisar documentos pendentes',
-  'Gerar relatório mensal',
-  'Buscar processos em atraso',
-]
+const ragStatus = ref<RAGStatus>({
+  available: false,
+  initialized: false
+})
 
-async function chamarIA(mensagem: string): Promise<string> {
-  await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 2000))
+const estatisticas = ref<RAGStatistics | null>(null)
+const sugestoes = ref<RAGSuggestion[]>([])
 
-  const respostasSimuladas = [
-    `Analisando sua solicitação: "${mensagem}"\n\nCom base nos dados disponíveis, aqui está minha análise:\n\n• **Processos identificados**: 15 processos relacionados\n• **Status predominante**: Em andamento\n• **Recomendação**: Revisar processos com mais de 30 dias\n\nPosso fornecer mais detalhes específicos se necessário.`,
+const mostrarEstatisticas = ref(false)
+const mostrarFiltros = ref(false)
 
-    `Entendi sua pergunta sobre: "${mensagem}"\n\n**Resumo executivo:**\n\n1. Situação atual bem mapeada\n2. Alguns pontos de atenção identificados\n3. Sugestões de melhoria disponíveis\n\nGostaria que eu detalhe algum aspecto específico?`,
+const filtros = ref({
+  tema: '',
+  status: '',
+  k: 5
+})
 
-    `Ótima pergunta! Sobre "${mensagem}":\n\n**Principais insights:**\n• Dados processados com sucesso\n• Padrões interessantes identificados\n• Recomendações práticas geradas\n\nPosso gerar um relatório detalhado se preferir.`,
-  ]
+// ==========================================
+// 🔧 COMPUTADAS
+// ==========================================
 
-  return respostasSimuladas[Math.floor(Math.random() * respostasSimuladas.length)]
+const temasDisponiveis = computed(() => {
+  if (!estatisticas.value?.tema_distribution) return []
+  return Object.keys(estatisticas.value.tema_distribution)
+})
+
+const statusDisponiveis = computed(() => {
+  if (!estatisticas.value?.status_distribution) return []
+  return Object.keys(estatisticas.value.status_distribution)
+})
+
+// ==========================================
+// 🌐 FUNÇÕES DE API
+// ==========================================
+
+async function verificarStatusRAG() {
+  try {
+    const status = await getRAGStatus()
+    
+    ragStatus.value = {
+      available: status.available && status.initialized,
+      initialized: status.initialized,
+      error: status.error
+    }
+    
+    if (ragStatus.value.available && status.statistics) {
+      estatisticas.value = status.statistics
+    }
+  } catch (error) {
+    console.error('Erro ao verificar status do RAG:', error)
+    ragStatus.value = {
+      available: false,
+      initialized: false,
+      error: 'Erro de conexão'
+    }
+  }
 }
 
+async function carregarSugestoes() {
+  try {
+    const response = await getRAGSuggestions()
+    sugestoes.value = response.suggestions || []
+  } catch (error) {
+    console.error('Erro ao carregar sugestões:', error)
+  }
+}
+
+// ==========================================
+// 🎯 FUNÇÕES PRINCIPAIS
+// ==========================================
+
 async function enviarMensagem() {
-  if (!novaMensagem.value.trim() || carregando.value) return
-
+  if (!novaMensagem.value.trim() || digitando.value || !ragStatus.value.available) {
+    return
+  }
+  
   const mensagemUsuario = novaMensagem.value.trim()
+  
+  // Valida a consulta
+  const validation = validateQuery(mensagemUsuario)
+  if (!validation.valid) {
+    alert(validation.error)
+    return
+  }
+  
   novaMensagem.value = ''
-
+  
+  // Adiciona mensagem do usuário
   mensagens.value.push({
     tipo: 'usuario',
     conteudo: mensagemUsuario,
-    timestamp: new Date(),
+    timestamp: new Date()
   })
-
-  await rolarParaBaixo()
-
-  carregando.value = true
-
+  
+  // Scroll para baixo
+  await nextTick()
+  scrollToBottom()
+  
+  // Mostra indicador de digitação
+  digitando.value = true
+  
   try {
-    const respostaIA = await chamarIA(mensagemUsuario)
-
+    let resultado: RAGResult
+    
+    // Verifica se há filtros ativos
+    const filtrosAtivos = (filtros.value.tema || filtros.value.status) 
+      ? { tema: filtros.value.tema, status: filtros.value.status }
+      : undefined
+    
+    if (filtrosAtivos) {
+      // Usa busca com filtros
+      resultado = await searchRAG({
+        query: mensagemUsuario,
+        filters: filtrosAtivos,
+        k: filtros.value.k
+      })
+    } else {
+      // Usa consulta básica
+      resultado = await queryRAG({
+        query: mensagemUsuario,
+        k: filtros.value.k
+      })
+    }
+    
+    // Adiciona resposta do assistente
     mensagens.value.push({
-      tipo: 'ia',
-      conteudo: respostaIA,
+      tipo: 'assistente',
+      conteudo: resultado.response || 'Desculpe, não consegui processar sua consulta.',
       timestamp: new Date(),
+      strategy: resultado.strategy_used,
+      confidence: resultado.confidence_score,
+      chunks: resultado.retrieved_chunks || [],
+      mostrarChunks: false
     })
-
-    await rolarParaBaixo()
+    
   } catch (error) {
-    console.error('Erro ao chamar IA:', error)
+    console.error('Erro ao enviar mensagem:', error)
+    
+    // Adiciona mensagem de erro
     mensagens.value.push({
-      tipo: 'ia',
-      conteudo: 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.',
-      timestamp: new Date(),
+      tipo: 'assistente',
+      conteudo: `Desculpe, ocorreu um erro ao processar sua consulta: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+      timestamp: new Date()
     })
   } finally {
-    carregando.value = false
+    digitando.value = false
+    await nextTick()
+    scrollToBottom()
+    
+    // Foca no input
+    if (messageInput.value) {
+      messageInput.value.focus()
+    }
   }
 }
 
-function enviarSugestao(sugestao: string) {
-  novaMensagem.value = sugestao
+function enviarSugestao(query: string) {
+  novaMensagem.value = query
   enviarMensagem()
 }
 
-function anexarArquivo() {
-  fileInput.value?.click()
-}
-
-function processarArquivo(event: Event) {
-  const target = event.target as HTMLInputElement
-  const arquivo = target.files?.[0]
-
-  if (arquivo) {
-    novaMensagem.value += `\n[Arquivo anexado: ${arquivo.name}]`
-  }
-}
-
-function limparConversa() {
+function limparChat() {
   if (confirm('Tem certeza que deseja limpar toda a conversa?')) {
     mensagens.value = []
   }
 }
 
-function exportarConversa() {
-  const conversa = mensagens.value
-    .map((m) => `[${formatarHorario(m.timestamp)}] ${m.tipo.toUpperCase()}: ${m.conteudo}`)
-    .join('\n\n')
-
-  const blob = new Blob([conversa], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `conversa-ia-${new Date().toISOString().split('T')[0]}.txt`
-  a.click()
-  URL.revokeObjectURL(url)
+function aplicarFiltros() {
+  // Se há mensagens, reprocessa a última consulta com filtros
+  if (mensagens.value.length > 0) {
+    const ultimaMensagemUsuario = mensagens.value
+      .slice()
+      .reverse()
+      .find(m => m.tipo === 'usuario')
+    
+    if (ultimaMensagemUsuario) {
+      novaMensagem.value = ultimaMensagemUsuario.conteudo
+      enviarMensagem()
+    }
+  }
 }
 
-function formatarMensagem(conteudo: string): string {
-  return conteudo
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/•/g, '•')
+function limparFiltros() {
+  filtros.value.tema = ''
+  filtros.value.status = ''
+  filtros.value.k = 5
 }
 
-function formatarHorario(timestamp: Date): string {
-  return timestamp.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-async function rolarParaBaixo() {
-  await nextTick()
+function scrollToBottom() {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
   }
 }
 
-onMounted(() => {
-  const textarea = document.querySelector('textarea')
-  if (textarea) {
-    textarea.addEventListener('input', function () {
-      this.style.height = 'auto'
-      this.style.height = Math.min(this.scrollHeight, 120) + 'px'
-    })
+function formatarMensagem(conteudo: string): string {
+  // Converte markdown básico para HTML
+  return conteudo
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>')
+    .replace(/•/g, '&bull;')
+}
+
+function formatarHora(timestamp: Date): string {
+  return timestamp.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function formatarConfianca(confidence: number): string {
+  return formatConfidence(confidence)
+}
+
+function obterCorEstrategia(strategy: string): string {
+  return getStrategyColor(strategy)
+}
+
+// ==========================================
+// 🔄 LIFECYCLE E WATCHERS
+// ==========================================
+
+onMounted(async () => {
+  await verificarStatusRAG()
+  await carregarSugestoes()
+  
+  // Foca no input
+  if (messageInput.value) {
+    messageInput.value.focus()
   }
+  
+  // Verifica status periodicamente
+  setInterval(verificarStatusRAG, 30000) // A cada 30 segundos
+})
+
+// Auto-resize do textarea
+watch(novaMensagem, () => {
+  if (messageInput.value) {
+    messageInput.value.style.height = 'auto'
+    messageInput.value.style.height = messageInput.value.scrollHeight + 'px'
+  }
+})
+
+// ==========================================
+// 🎯 ATALHOS DE TECLADO
+// ==========================================
+
+onMounted(() => {
+  document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + L para limpar chat
+    if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+      e.preventDefault()
+      limparChat()
+    }
+    
+    // Ctrl/Cmd + / para focar no input
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+      e.preventDefault()
+      if (messageInput.value) {
+        messageInput.value.focus()
+      }
+    }
+  })
+})
+</script>
+  } finally {
+    digitando.value = false
+    await nextTick()
+    scrollToBottom()
+    
+    // Foca no input
+    if (messageInput.value) {
+      messageInput.value.focus()
+    }
+  }
+}
+
+function enviarSugestao(query: string) {
+  novaMensagem.value = query
+  enviarMensagem()
+}
+
+function limparChat() {
+  if (confirm('Tem certeza que deseja limpar toda a conversa?')) {
+    mensagens.value = []
+  }
+}
+
+function aplicarFiltros() {
+  // Se há mensagens, reprocessa a última consulta com filtros
+  if (mensagens.value.length > 0) {
+    const ultimaMensagemUsuario = mensagens.value
+      .slice()
+      .reverse()
+      .find(m => m.tipo === 'usuario')
+    
+    if (ultimaMensagemUsuario) {
+      novaMensagem.value = ultimaMensagemUsuario.conteudo
+      enviarMensagem()
+    }
+  }
+}
+
+function scrollToBottom() {
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+}
+
+function formatarMensagem(conteudo: string): string {
+  // Converte markdown básico para HTML
+  return conteudo
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>')
+    .replace(/•/g, '&bull;')
+}
+
+function formatarHora(timestamp: Date): string {
+  return timestamp.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// ==========================================
+// 🔄 LIFECYCLE E WATCHERS
+// ==========================================
+
+onMounted(async () => {
+  await verificarStatusRAG()
+  await carregarSugestoes()
+  
+  // Foca no input
+  if (messageInput.value) {
+    messageInput.value.focus()
+  }
+  
+  // Verifica status periodicamente
+  setInterval(verificarStatusRAG, 30000) // A cada 30 segundos
+})
+
+// Auto-resize do textarea
+watch(novaMensagem, () => {
+  if (messageInput.value) {
+    messageInput.value.style.height = 'auto'
+    messageInput.value.style.height = messageInput.value.scrollHeight + 'px'
+  }
+})
+
+// ==========================================
+// 🎯 ATALHOS DE TECLADO
+// ==========================================
+
+onMounted(() => {
+  document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + L para limpar chat
+    if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+      e.preventDefault()
+      limparChat()
+    }
+    
+    // Ctrl/Cmd + / para focar no input
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+      e.preventDefault()
+      if (messageInput.value) {
+        messageInput.value.focus()
+      }
+    }
+  })
 })
 </script>
 
-<style>
+<style scoped>
+/* Animações personalizadas */
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1.4s infinite;
+}
+
+/* Estilo para o scroll */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Estilo para conteúdo prose */
 .prose {
-  @apply text-current;
+  color: inherit;
 }
 
 .prose strong {
-  @apply font-semibold text-current;
+  font-weight: 600;
 }
 
 .prose em {
-  @apply italic text-current;
+  font-style: italic;
 }
 </style>
