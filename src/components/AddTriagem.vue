@@ -162,6 +162,13 @@
       </form>
     </div>
   </div>
+  <!-- Modal de progresso -->
+   <ProgressWebSocket 
+    :operation-id="currentOperationId"
+    :visible="showProgress"
+    @complete="handleProgressComplete"
+    @error="handleProgressError"
+  />
 </template>
 
 <script setup lang="ts">
@@ -170,6 +177,7 @@ import { pdfToMarkdown } from '@/utils/pdfToMarkdown'
 import { pdfToDat } from '@/utils/pdfToDat'
 import { useTriagemStore } from '@/stores/triagem.store'
 import { addProcesso, updateProcesso } from '@/api/triagem'
+import ProgressWebSocket from './ProgressWebSocket.vue'
 
 const props = defineProps<{
   open: boolean
@@ -181,7 +189,9 @@ const store = useTriagemStore()
 const arquivoPdf = ref<File | null>(null)
 const processoAntigo = ref('')
 const loading = ref(false)
-const debugMode = ref(false) // Para debug, pode ser removido em produção
+const debugMode = ref(false)
+const showProgress = ref(false)
+const currentOperationId = ref<string | null>(null)
 
 // Formulário sem campo ultimaAtualizacao
 const form = ref<{
@@ -240,7 +250,6 @@ watch(
   (aberto) => {
     if (aberto) {
       if (props.mode === 'new') {
-        // Reseta formulário para novo processo
         form.value = {
           numeroProcesso: '',
           tema: '',
@@ -277,44 +286,80 @@ function handlePdf(event: Event) {
 }
 
 async function submit() {
-  loading.value = true
-  
   try {
     let markdown = ''
     let dat = ''
     
+    // Processa PDF se houver
     if (arquivoPdf.value) {
-      console.log('📄 Processando PDF:', arquivoPdf.value.name)
+      loading.value = true
       markdown = await pdfToMarkdown(arquivoPdf.value)
       dat = await pdfToDat(arquivoPdf.value)
+      loading.value = false
     }
 
     const { suspeitos, ...formSemSuspeitos } = form.value
 
     const payload = {
       ...formSemSuspeitos,
-      ultimaAtualizacao: new Date().toISOString(),
       markdown,
       dat,
     }
 
-    console.log('📤 Enviando payload:', payload)
-
     if (props.mode === 'new') {
-      await addProcesso(payload)
-      console.log('✅ Processo criado com sucesso')
+      console.log('🚀 Iniciando adição de processo...')
+      
+      // IMPORTANTE: Mostra o modal ANTES do fetch
+      showProgress.value = true
+      
+      const response = await fetch('http://localhost:5000/triagem/form', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao adicionar processo')
+      }
+      
+      // Define o operation_id para o componente de progresso
+      currentOperationId.value = result.operation_id
+      console.log('🆔 Operation ID recebido:', result.operation_id)
+      
     } else if (props.mode === 'edit') {
+      // Para edição, usa método antigo
+      loading.value = true
       await updateProcesso(processoAntigo.value, payload)
-      console.log('✅ Processo atualizado com sucesso')
+      handleProgressComplete()
     }
 
-    emit('added')
-    emit('close')
   } catch (err) {
-    console.error('❌ Erro ao salvar processo:', err)
-    alert('Erro ao salvar processo.')
-  } finally {
-    loading.value = false
+    console.error('❌ Erro no submit:', err)
+    //@ts-ignore
+    handleProgressError(err.message || 'Erro ao salvar processo')
   }
+}
+
+function handleProgressComplete() {
+  console.log('✅ Progresso completado!')
+  showProgress.value = false
+  currentOperationId.value = null
+  loading.value = false
+  
+  emit('added')
+  emit('close')
+}
+
+function handleProgressError(errorMessage: string) {
+  console.error('❌ Erro no progresso:', errorMessage)
+  showProgress.value = false
+  currentOperationId.value = null
+  loading.value = false
+  
+  alert(`Erro: ${errorMessage}`)
 }
 </script>
