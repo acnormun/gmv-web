@@ -8,12 +8,11 @@ export const useTriagemStore = defineStore('triagem', () => {
   const processoSelecionado = ref<Processo | null>(null)
 
   async function carregarProcessos() {
-    const data = await getProcessos().then(r => {
-      r.forEach(item => {
-        if(item.suspeitos === 'nan') item.suspeitos = ''
-      })
-      return r
-    })
+    const data = await getProcessos().then((res) => res.map((item) => ({
+      ...item,
+      comentarios: item.comentarios === 'nan' ? '' : item.comentarios,
+      suspeitos: item.suspeitos === 'nan' ? null : item.suspeitos
+    })));
     processos.value = data
   }
 

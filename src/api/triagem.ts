@@ -11,7 +11,7 @@ export interface ProcessoForm {
 
 export interface Processo extends ProcessoForm {
   ultimaAtualizacao: string
-  suspeitos: Array<string | null> | string
+  suspeitos: string | null
 }
 
 const API_BASE = 'http://localhost:5000'

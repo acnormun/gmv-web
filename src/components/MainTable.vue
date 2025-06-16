@@ -31,7 +31,7 @@
           </thead>
           <tbody>
             <tr v-for="(item, index) in processosPaginados" :key="index" class="border-b hover:bg-neutral-50" :class="[
-              item.suspeitos?.length > 0 && 'bg-yellow-100',
+              item.suspeitos && 'bg-yellow-100',
               verificarProcessoEmAtraso(item) && 'bg-red-50 border-red-200'
             ]">
               <td class="py-3 px-4 truncate text-sm" :title="item.numeroProcesso">
