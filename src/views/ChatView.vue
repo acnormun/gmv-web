@@ -12,7 +12,7 @@
             {{ ragStatus.available ? 'Sistema RAG Online' : 'Sistema RAG Offline' }}
           </div>
         </div>
-        
+
         <div class="flex items-center space-x-3">
           <!-- Botão de Estatísticas -->
           <button
@@ -24,7 +24,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
           </button>
-          
+
           <!-- Botão de Limpar Chat -->
           <button
             @click="limparChat"
@@ -76,7 +76,7 @@
             </div>
             <h3 class="text-lg font-medium text-gray-900 mb-2">Olá! Como posso ajudar?</h3>
             <p class="text-gray-600 mb-4">Faça perguntas sobre os processos, análises ou qualquer informação do sistema GMV.</p>
-            
+
             <!-- Sugestões Rápidas -->
             <div v-if="sugestoes.length > 0" class="max-w-2xl mx-auto">
               <p class="text-sm text-gray-500 mb-3">Sugestões de consultas:</p>
@@ -127,7 +127,7 @@
                     </span>
                   </div>
                   <div class="prose prose-sm max-w-none" v-html="formatarMensagem(mensagem.conteudo)"></div>
-                  
+
                   <!-- Chunks Recuperados (Expandível) -->
                   <div v-if="mensagem.chunks && mensagem.chunks.length > 0" class="mt-3 border-t pt-3">
                     <button
@@ -139,7 +139,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                       </svg>
                     </button>
-                    
+
                     <div v-if="mensagem.mostrarChunks" class="mt-2 space-y-2">
                       <div
                         v-for="(chunk, chunkIndex) in mensagem.chunks.slice(0, 3)"
@@ -160,12 +160,12 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- Mensagem do Usuário -->
               <div v-else>
                 {{ mensagem.conteudo }}
               </div>
-              
+
               <!-- Timestamp -->
               <div
                 class="text-xs mt-2 opacity-70"
@@ -206,13 +206,13 @@
                 :disabled="digitando || !ragStatus.available"
                 style="min-height: 48px; max-height: 120px;"
               ></textarea>
-              
+
               <!-- Dica de Atalho -->
               <div class="absolute bottom-1 right-2 text-xs text-gray-400">
                 Enter para enviar • Shift+Enter para quebra de linha
               </div>
             </div>
-            
+
             <!-- Botão de Filtros -->
             <button
               type="button"
@@ -225,7 +225,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
               </svg>
             </button>
-            
+
             <button
               type="submit"
               :disabled="!novaMensagem.trim() || digitando || !ragStatus.available"
@@ -241,7 +241,7 @@
               <span>{{ digitando ? 'Enviando' : 'Enviar' }}</span>
             </button>
           </form>
-          
+
           <!-- Barra de Filtros Ativa -->
           <div v-if="filtros.tema || filtros.status" class="mt-3 flex items-center space-x-2 text-sm">
             <span class="text-gray-500">Filtros ativos:</span>
@@ -275,7 +275,7 @@
             </svg>
           </button>
         </div>
-        
+
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Tema</label>
@@ -284,7 +284,7 @@
               <option v-for="tema in temasDisponiveis" :key="tema" :value="tema">{{ tema }}</option>
             </select>
           </div>
-          
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <select v-model="filtros.status" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -292,7 +292,7 @@
               <option v-for="status in statusDisponiveis" :key="status" :value="status">{{ status }}</option>
             </select>
           </div>
-          
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Número de Resultados</label>
             <select v-model="filtros.k" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -302,7 +302,7 @@
               <option :value="10">10 resultados</option>
             </select>
           </div>
-          
+
           <div class="pt-4 border-t">
             <button
               @click="aplicarFiltros"
@@ -310,7 +310,7 @@
             >
               Aplicar Filtros
             </button>
-            
+
             <button
               @click="limparFiltros"
               class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
@@ -318,11 +318,11 @@
               Limpar Filtros
             </button>
           </div>
-          
+
           <!-- Estatísticas dos Filtros -->
           <div v-if="estatisticas" class="pt-4 border-t">
             <h4 class="text-sm font-medium text-gray-700 mb-2">Distribuição</h4>
-            
+
             <div class="space-y-2">
               <div>
                 <span class="text-xs text-gray-500">Por Tema:</span>
@@ -333,7 +333,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <span class="text-xs text-gray-500">Por Status:</span>
                 <div class="mt-1 space-y-1">
@@ -350,21 +350,19 @@
     </div>
   </div>
 </template>
-
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
-import { 
-  getRAGStatus, 
-  queryRAG, 
-  searchRAG, 
+import {
+  getRAGStatus,
+  queryRAG,
+  searchRAG,
   getRAGSuggestions,
   type RAGResult,
   type RAGStatus,
   type RAGStatistics,
   type RAGSuggestion,
   formatConfidence,
-  formatProcessingTime,
-  getStrategyColor,
   validateQuery
 } from '@/api/rag'
 
@@ -430,13 +428,13 @@ const statusDisponiveis = computed(() => {
 async function verificarStatusRAG() {
   try {
     const status = await getRAGStatus()
-    
+
     ragStatus.value = {
       available: status.available && status.initialized,
       initialized: status.initialized,
       error: status.error
     }
-    
+
     if (ragStatus.value.available && status.statistics) {
       estatisticas.value = status.statistics
     }
@@ -467,40 +465,40 @@ async function enviarMensagem() {
   if (!novaMensagem.value.trim() || digitando.value || !ragStatus.value.available) {
     return
   }
-  
+
   const mensagemUsuario = novaMensagem.value.trim()
-  
+
   // Valida a consulta
   const validation = validateQuery(mensagemUsuario)
   if (!validation.valid) {
     alert(validation.error)
     return
   }
-  
+
   novaMensagem.value = ''
-  
+
   // Adiciona mensagem do usuário
   mensagens.value.push({
     tipo: 'usuario',
     conteudo: mensagemUsuario,
     timestamp: new Date()
   })
-  
+
   // Scroll para baixo
   await nextTick()
   scrollToBottom()
-  
+
   // Mostra indicador de digitação
   digitando.value = true
-  
+
   try {
     let resultado: RAGResult
-    
+
     // Verifica se há filtros ativos
-    const filtrosAtivos = (filtros.value.tema || filtros.value.status) 
+    const filtrosAtivos = (filtros.value.tema || filtros.value.status)
       ? { tema: filtros.value.tema, status: filtros.value.status }
       : undefined
-    
+
     if (filtrosAtivos) {
       // Usa busca com filtros
       resultado = await searchRAG({
@@ -515,7 +513,7 @@ async function enviarMensagem() {
         k: filtros.value.k
       })
     }
-    
+
     // Adiciona resposta do assistente
     mensagens.value.push({
       tipo: 'assistente',
@@ -526,10 +524,10 @@ async function enviarMensagem() {
       chunks: resultado.retrieved_chunks || [],
       mostrarChunks: false
     })
-    
+
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error)
-    
+
     // Adiciona mensagem de erro
     mensagens.value.push({
       tipo: 'assistente',
@@ -540,7 +538,7 @@ async function enviarMensagem() {
     digitando.value = false
     await nextTick()
     scrollToBottom()
-    
+
     // Foca no input
     if (messageInput.value) {
       messageInput.value.focus()
@@ -566,7 +564,7 @@ function aplicarFiltros() {
       .slice()
       .reverse()
       .find(m => m.tipo === 'usuario')
-    
+
     if (ultimaMensagemUsuario) {
       novaMensagem.value = ultimaMensagemUsuario.conteudo
       enviarMensagem()
@@ -606,10 +604,6 @@ function formatarConfianca(confidence: number): string {
   return formatConfidence(confidence)
 }
 
-function obterCorEstrategia(strategy: string): string {
-  return getStrategyColor(strategy)
-}
-
 // ==========================================
 // 🔄 LIFECYCLE E WATCHERS
 // ==========================================
@@ -617,12 +611,12 @@ function obterCorEstrategia(strategy: string): string {
 onMounted(async () => {
   await verificarStatusRAG()
   await carregarSugestoes()
-  
+
   // Foca no input
   if (messageInput.value) {
     messageInput.value.focus()
   }
-  
+
   // Verifica status periodicamente
   setInterval(verificarStatusRAG, 30000) // A cada 30 segundos
 })
@@ -646,114 +640,7 @@ onMounted(() => {
       e.preventDefault()
       limparChat()
     }
-    
-    // Ctrl/Cmd + / para focar no input
-    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-      e.preventDefault()
-      if (messageInput.value) {
-        messageInput.value.focus()
-      }
-    }
-  })
-})
-</script>
-  } finally {
-    digitando.value = false
-    await nextTick()
-    scrollToBottom()
-    
-    // Foca no input
-    if (messageInput.value) {
-      messageInput.value.focus()
-    }
-  }
-}
 
-function enviarSugestao(query: string) {
-  novaMensagem.value = query
-  enviarMensagem()
-}
-
-function limparChat() {
-  if (confirm('Tem certeza que deseja limpar toda a conversa?')) {
-    mensagens.value = []
-  }
-}
-
-function aplicarFiltros() {
-  // Se há mensagens, reprocessa a última consulta com filtros
-  if (mensagens.value.length > 0) {
-    const ultimaMensagemUsuario = mensagens.value
-      .slice()
-      .reverse()
-      .find(m => m.tipo === 'usuario')
-    
-    if (ultimaMensagemUsuario) {
-      novaMensagem.value = ultimaMensagemUsuario.conteudo
-      enviarMensagem()
-    }
-  }
-}
-
-function scrollToBottom() {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-  }
-}
-
-function formatarMensagem(conteudo: string): string {
-  // Converte markdown básico para HTML
-  return conteudo
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n/g, '<br>')
-    .replace(/•/g, '&bull;')
-}
-
-function formatarHora(timestamp: Date): string {
-  return timestamp.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-// ==========================================
-// 🔄 LIFECYCLE E WATCHERS
-// ==========================================
-
-onMounted(async () => {
-  await verificarStatusRAG()
-  await carregarSugestoes()
-  
-  // Foca no input
-  if (messageInput.value) {
-    messageInput.value.focus()
-  }
-  
-  // Verifica status periodicamente
-  setInterval(verificarStatusRAG, 30000) // A cada 30 segundos
-})
-
-// Auto-resize do textarea
-watch(novaMensagem, () => {
-  if (messageInput.value) {
-    messageInput.value.style.height = 'auto'
-    messageInput.value.style.height = messageInput.value.scrollHeight + 'px'
-  }
-})
-
-// ==========================================
-// 🎯 ATALHOS DE TECLADO
-// ==========================================
-
-onMounted(() => {
-  document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + L para limpar chat
-    if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
-      e.preventDefault()
-      limparChat()
-    }
-    
     // Ctrl/Cmd + / para focar no input
     if ((e.ctrlKey || e.metaKey) && e.key === '/') {
       e.preventDefault()

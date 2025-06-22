@@ -83,6 +83,7 @@
   </div>
 </template>
 
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import AddTriagem from './AddTriagem.vue'
@@ -227,7 +228,7 @@ function verificarProcessoEmAtraso(processo: Processo): boolean {
   if (processo.dataDistribuicao) {
     const dataDistribuicao = new Date(processo.dataDistribuicao)
     const diasSemConclusao = Math.floor((hoje.getTime() - dataDistribuicao.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (diasSemConclusao > 15) {
       return true
     }

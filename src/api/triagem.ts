@@ -26,7 +26,7 @@ export async function getProcessos(): Promise<Processo[]> {
 
 export async function addProcesso(processo: ProcessoForm): Promise<void> {
   console.log('📤 Enviando novo processo:', processo)
-  
+
   const res = await fetch(`${API_BASE}/triagem/form`, {
     method: 'POST',
     headers: {
@@ -40,7 +40,7 @@ export async function addProcesso(processo: ProcessoForm): Promise<void> {
     console.error('❌ Erro na resposta:', error)
     throw new Error(error.message || 'Erro ao adicionar processo')
   }
-  
+
   console.log('✅ Processo adicionado com sucesso')
 }
 
@@ -49,7 +49,7 @@ export async function updateProcesso(
   processoAtualizado: ProcessoForm,
 ): Promise<void> {
   console.log('📤 Enviando atualização:', processoAtualizado)
-  
+
   const res = await fetch(`${API_BASE}/triagem/${numeroAntigo}`, {
     method: 'PUT',
     headers: {
@@ -63,7 +63,7 @@ export async function updateProcesso(
     console.error('❌ Erro na atualização:', error)
     throw new Error(error.message || 'Erro ao atualizar processo')
   }
-  
+
   console.log('✅ Processo atualizado com sucesso')
 }
 
@@ -82,9 +82,9 @@ export async function getProcesso(numero: number | string) {
   const res = await fetch(`${API_BASE}/triagem/${numero}/dat`, {
     method: 'GET',
   })
-  const { base64 } = await res.json()
+  const { dat } = await res.json()
 
-  const blob = await (await fetch(`data:application/pdf;base64,${base64}`)).blob()
+  const blob = await (await fetch(`data:application/pdf;base64,${dat}`)).blob()
   const url = URL.createObjectURL(blob)
   window.open(url, '_blank')
 }
