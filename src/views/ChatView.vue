@@ -356,10 +356,8 @@ import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import {
   getRAGStatus,
   queryRAG,
-  searchRAG,
   getRAGSuggestions,
   type RAGResult,
-  type RAGStatus,
   type RAGStatistics,
   type RAGSuggestion,
   formatConfidence,
@@ -390,7 +388,7 @@ const digitando = ref(false)
 const messagesContainer = ref<HTMLElement>()
 const messageInput = ref<HTMLTextAreaElement>()
 
-const ragStatus = ref<RAGStatus>({
+const ragStatus = ref<any>({
   available: false,
   initialized: false
 })
@@ -430,13 +428,9 @@ async function verificarStatusRAG() {
     const status = await getRAGStatus()
 
     ragStatus.value = {
-      available: status.available && status.initialized,
-      initialized: status.initialized,
+      available: status.isReady,
+      initialized: status.isReady,
       error: status.error
-    }
-
-    if (ragStatus.value.available && status.statistics) {
-      estatisticas.value = status.statistics
     }
   } catch (error) {
     console.error('Erro ao verificar status do RAG:', error)
@@ -457,10 +451,6 @@ async function carregarSugestoes() {
   }
 }
 
-// ==========================================
-// 🎯 FUNÇÕES PRINCIPAIS
-// ==========================================
-
 async function enviarMensagem() {
   if (!novaMensagem.value.trim() || digitando.value || !ragStatus.value.available) {
     return
@@ -468,7 +458,6 @@ async function enviarMensagem() {
 
   const mensagemUsuario = novaMensagem.value.trim()
 
-  // Valida a consulta
   const validation = validateQuery(mensagemUsuario)
   if (!validation.valid) {
     alert(validation.error)
@@ -477,51 +466,30 @@ async function enviarMensagem() {
 
   novaMensagem.value = ''
 
-  // Adiciona mensagem do usuário
   mensagens.value.push({
     tipo: 'usuario',
     conteudo: mensagemUsuario,
     timestamp: new Date()
   })
 
-  // Scroll para baixo
   await nextTick()
   scrollToBottom()
 
-  // Mostra indicador de digitação
   digitando.value = true
 
   try {
-    let resultado: RAGResult
-
-    // Verifica se há filtros ativos
-    const filtrosAtivos = (filtros.value.tema || filtros.value.status)
-      ? { tema: filtros.value.tema, status: filtros.value.status }
-      : undefined
-
-    if (filtrosAtivos) {
-      // Usa busca com filtros
-      resultado = await searchRAG({
-        query: mensagemUsuario,
-        filters: filtrosAtivos,
-        k: filtros.value.k
-      })
-    } else {
-      // Usa consulta básica
-      resultado = await queryRAG({
-        query: mensagemUsuario,
-        k: filtros.value.k
-      })
-    }
-
-    // Adiciona resposta do assistente
+    const resultado: RAGResult = await queryRAG({
+      question: mensagemUsuario,
+      context: '',
+      query: ''
+    })
     mensagens.value.push({
       tipo: 'assistente',
-      conteudo: resultado.response || 'Desculpe, não consegui processar sua consulta.',
+      conteudo: resultado.data.answer || 'Desculpe, não consegui processar sua consulta.',
       timestamp: new Date(),
-      strategy: resultado.strategy_used,
-      confidence: resultado.confidence_score,
-      chunks: resultado.retrieved_chunks || [],
+      strategy: resultado.data.search_method,
+      confidence: undefined,
+      chunks: resultado.data.source_documents || [],
       mostrarChunks: false
     })
 
@@ -539,12 +507,12 @@ async function enviarMensagem() {
     await nextTick()
     scrollToBottom()
 
-    // Foca no input
     if (messageInput.value) {
       messageInput.value.focus()
     }
   }
 }
+
 
 function enviarSugestao(query: string) {
   novaMensagem.value = query
@@ -616,9 +584,6 @@ onMounted(async () => {
   if (messageInput.value) {
     messageInput.value.focus()
   }
-
-  // Verifica status periodicamente
-  setInterval(verificarStatusRAG, 30000) // A cada 30 segundos
 })
 
 // Auto-resize do textarea
@@ -693,7 +658,6 @@ onMounted(() => {
 .prose strong {
   font-weight: 600;
 }
-
 .prose em {
   font-style: italic;
 }

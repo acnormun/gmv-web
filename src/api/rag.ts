@@ -1,6 +1,4 @@
-// src/api/rag.ts
-// API TypeScript para comunicação com o sistema RAG
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, readonly } from 'vue'
 
 // ==========================================
@@ -8,8 +6,9 @@ import { ref, readonly } from 'vue'
 // ==========================================
 
 export interface RAGQueryRequest {
+  question: string,
+  context: string,
   query: string
-  k?: number
 }
 
 export interface RAGSearchRequest {
@@ -37,21 +36,29 @@ export interface RAGChunk {
   }
 }
 
+export interface RAGSourceDocument {
+  content: string
+  filename: string
+}
+
 export interface RAGResult {
-  query: string
-  response: string
-  retrieved_chunks: RAGChunk[]
-  confidence_score: number
-  strategy_used: string
-  processing_time: number
-  filters_applied?: any
-  original_query?: string
+  data: {
+    answer: string
+    context_size: number
+    documents_count: number
+    processing_time: number
+    question: string
+    search_method: string
+    source_documents: RAGSourceDocument[]
+  }
 }
 
 export interface RAGStatus {
-  available: boolean
-  initialized: boolean
-  statistics?: RAGStatistics
+  isReady: boolean
+  documents_loaded: number,
+  message: string,
+  method: string,
+  status: string,
   error?: string
 }
 
@@ -156,23 +163,25 @@ async function handleResponse<T>(response: Response): Promise<T> {
  * Verifica o status do sistema RAG
  */
 export async function getRAGStatus(): Promise<RAGStatus> {
-  const response = await fetch(`${API_BASE}/rag/status`)
+  const response = await fetch(`${API_BASE}/api/rag/status`)
   return handleResponse<RAGStatus>(response)
 }
 
-/**
- * Executa uma consulta básica no RAG
- */
 export async function queryRAG(request: RAGQueryRequest): Promise<RAGResult> {
-  const response = await fetch(`${API_BASE}/rag/query`, {
+  const response = await fetch(`${API_BASE}/api/rag/query`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(request)
+    body: JSON.stringify({
+      question: request.question,
+      context: request.context || ''
+    })
   })
+
   return handleResponse<RAGResult>(response)
 }
+
 
 /**
  * Executa uma busca avançada com filtros
@@ -192,7 +201,7 @@ export async function searchRAG(request: RAGSearchRequest): Promise<RAGResult> {
  * Obtém estatísticas detalhadas do sistema RAG
  */
 export async function getRAGStatistics(): Promise<RAGStatistics> {
-  const response = await fetch(`${API_BASE}/rag/statistics`)
+  const response = await fetch(`${API_BASE}/api/rag/statistics`)
   return handleResponse<RAGStatistics>(response)
 }
 
@@ -302,15 +311,15 @@ export function validateQuery(query: string): { valid: boolean; error?: string }
   if (!query || query.trim().length === 0) {
     return { valid: false, error: 'Consulta não pode estar vazia' }
   }
-  
+
   if (query.trim().length < 3) {
     return { valid: false, error: 'Consulta deve ter pelo menos 3 caracteres' }
   }
-  
+
   if (query.length > 1000) {
     return { valid: false, error: 'Consulta muito longa (máximo 1000 caracteres)' }
   }
-  
+
   return { valid: true }
 }
 
@@ -319,27 +328,27 @@ export function validateQuery(query: string): { valid: boolean; error?: string }
  */
 export function buildFilteredQuery(baseQuery: string, filters: RAGSearchRequest['filters']): string {
   if (!filters) return baseQuery
-  
+
   const filterParts: string[] = []
-  
+
   if (filters.tema) {
     filterParts.push(`tema: ${filters.tema}`)
   }
-  
+
   if (filters.status) {
     filterParts.push(`status: ${filters.status}`)
   }
-  
+
   if (filters.responsavel) {
     filterParts.push(`responsável: ${filters.responsavel}`)
   }
-  
+
   if (filters.suspeitos) {
     filterParts.push(`suspeitos: ${filters.suspeitos}`)
   }
-  
+
   if (filterParts.length === 0) return baseQuery
-  
+
   return `${baseQuery} considerando ${filterParts.join(', ')}`
 }
 
@@ -353,14 +362,14 @@ export function extractKeywords(query: string): string[] {
     .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-  
+
   // Remove palavras muito comuns
   const stopWords = new Set([
     'a', 'o', 'e', 'de', 'da', 'do', 'em', 'para', 'com', 'que', 'por',
     'qual', 'quais', 'como', 'quando', 'onde', 'porque', 'se', 'mais',
     'menos', 'muito', 'pouco', 'sobre', 'entre', 'sem', 'mas', 'ou'
   ])
-  
+
   return cleaned
     .split(' ')
     .filter(word => word.length > 2 && !stopWords.has(word))
@@ -378,14 +387,14 @@ export function suggestRelatedQueries(keywords: string[]): string[] {
     'Compare processos com {keyword}',
     'Identifique padrões em {keyword}'
   ]
-  
+
   const suggestions: string[] = []
-  
+
   keywords.slice(0, 3).forEach(keyword => {
     const template = templates[Math.floor(Math.random() * templates.length)]
     suggestions.push(template.replace('{keyword}', keyword))
   })
-  
+
   return suggestions
 }
 
@@ -401,33 +410,29 @@ export function useRAG() {
   const error = ref<string | null>(null)
   const status = ref<RAGStatus | null>(null)
   const statistics = ref<RAGStatistics | null>(null)
-  
+
   const checkStatus = async () => {
     try {
       isLoading.value = true
       error.value = null
       status.value = await getRAGStatus()
-      
-      if (status.value.statistics) {
-        statistics.value = status.value.statistics
-      }
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro desconhecido'
     } finally {
       isLoading.value = false
     }
   }
-  
+
   const query = async (queryRequest: RAGQueryRequest): Promise<RAGResult | null> => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const validation = validateQuery(queryRequest.query)
       if (!validation.valid) {
         throw new Error(validation.error)
       }
-      
+
       return await queryRAG(queryRequest)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro na consulta'
@@ -436,17 +441,17 @@ export function useRAG() {
       isLoading.value = false
     }
   }
-  
+
   const search = async (searchRequest: RAGSearchRequest): Promise<RAGResult | null> => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const validation = validateQuery(searchRequest.query)
       if (!validation.valid) {
         throw new Error(validation.error)
       }
-      
+
       return await searchRAG(searchRequest)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro na busca'
@@ -455,7 +460,7 @@ export function useRAG() {
       isLoading.value = false
     }
   }
-  
+
   return {
     isLoading: readonly(isLoading),
     error: readonly(error),
@@ -482,7 +487,7 @@ export default {
   getRAGHealth,
   analyzeProcess,
   getDashboardInsights,
-  
+
   // Utility Functions
   formatConfidence,
   formatProcessingTime,
@@ -492,10 +497,10 @@ export default {
   buildFilteredQuery,
   extractKeywords,
   suggestRelatedQueries,
-  
+
   // Vue Composable
   useRAG,
-  
+
   // Error Class
   RAGAPIError
 }
