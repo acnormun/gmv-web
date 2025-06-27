@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ref, readonly } from 'vue'
-
-// ==========================================
-// 🔧 INTERFACES E TIPOS
-// ==========================================
+import { ref, readonly, computed } from 'vue'
 
 export interface RAGQueryRequest {
   question: string,
-  context: string,
+  context: string[],
   query: string
 }
 
@@ -126,9 +122,44 @@ export interface DashboardInsights {
   generated_at: string
 }
 
-// ==========================================
-// 🌐 CONFIGURAÇÃO DA API
-// ==========================================
+export interface ContextConfig {
+  documentos: string[]
+  processos: string[]
+  incluir_metadata?: boolean
+}
+
+export interface RAGQueryWithContextRequest {
+  question: string
+  context: ContextConfig
+  k?: number
+}
+
+export interface RAGContextResult extends RAGResult {
+  data: RAGResult['data'] & {
+    context_info: {
+      documentos_selecionados: string[]
+      processos_selecionados: string[]
+      total_filtered_docs: number
+      relevant_chunks: number
+    }
+  }
+}
+
+export interface DocumentoDisponivel {
+  filename: string
+  metadata?: Record<string, any>
+}
+
+export interface ProcessoTriagem {
+  numeroProcesso: string
+  tema: string
+  dataDistribuicao: string
+  responsavel: string
+  status: string
+  ultimaAtualizacao: string
+  suspeitos: string
+  comentarios?: string
+}
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -155,20 +186,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json()
 }
 
-// ==========================================
-// 🎯 FUNÇÕES DA API RAG
-// ==========================================
-
-/**
- * Verifica o status do sistema RAG
- */
 export async function getRAGStatus(): Promise<RAGStatus> {
   const response = await fetch(`${API_BASE}/api/rag/status`)
   return handleResponse<RAGStatus>(response)
 }
 
 export async function queryRAG(request: RAGQueryRequest): Promise<RAGResult> {
-  const response = await fetch(`${API_BASE}/api/rag/query`, {
+  const response = await fetch(`${API_BASE}/api/rag/query-with-context`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -182,10 +206,6 @@ export async function queryRAG(request: RAGQueryRequest): Promise<RAGResult> {
   return handleResponse<RAGResult>(response)
 }
 
-
-/**
- * Executa uma busca avançada com filtros
- */
 export async function searchRAG(request: RAGSearchRequest): Promise<RAGResult> {
   const response = await fetch(`${API_BASE}/rag/search`, {
     method: 'POST',
@@ -197,25 +217,16 @@ export async function searchRAG(request: RAGSearchRequest): Promise<RAGResult> {
   return handleResponse<RAGResult>(response)
 }
 
-/**
- * Obtém estatísticas detalhadas do sistema RAG
- */
 export async function getRAGStatistics(): Promise<RAGStatistics> {
   const response = await fetch(`${API_BASE}/api/rag/statistics`)
   return handleResponse<RAGStatistics>(response)
 }
 
-/**
- * Obtém sugestões de consultas
- */
 export async function getRAGSuggestions(): Promise<RAGSuggestionsResponse> {
   const response = await fetch(`${API_BASE}/rag/suggestions`)
   return handleResponse<RAGSuggestionsResponse>(response)
 }
 
-/**
- * Reinicializa o sistema RAG
- */
 export async function reinitializeRAG(): Promise<{ success: boolean; message: string; statistics?: RAGStatistics }> {
   const response = await fetch(`${API_BASE}/rag/reinitialize`, {
     method: 'POST',
@@ -226,17 +237,11 @@ export async function reinitializeRAG(): Promise<{ success: boolean; message: st
   return handleResponse(response)
 }
 
-/**
- * Verifica a saúde do sistema RAG
- */
 export async function getRAGHealth(): Promise<RAGHealthStatus> {
   const response = await fetch(`${API_BASE}/rag/health`)
   return handleResponse<RAGHealthStatus>(response)
 }
 
-/**
- * Analisa um processo específico usando RAG
- */
 export async function analyzeProcess(numeroProcesso: string): Promise<ProcessAnalysis> {
   const response = await fetch(`${API_BASE}/triagem/${numeroProcesso}/analyze`, {
     method: 'POST',
@@ -247,28 +252,45 @@ export async function analyzeProcess(numeroProcesso: string): Promise<ProcessAna
   return handleResponse<ProcessAnalysis>(response)
 }
 
-/**
- * Obtém insights para o dashboard
- */
 export async function getDashboardInsights(): Promise<DashboardInsights> {
   const response = await fetch(`${API_BASE}/dashboard/insights`)
   return handleResponse<DashboardInsights>(response)
 }
 
-// ==========================================
-// 🔧 FUNÇÕES UTILITÁRIAS
-// ==========================================
+export async function queryRAGWithContext(request: RAGQueryWithContextRequest): Promise<RAGContextResult> {
+  const response = await fetch(`${API_BASE}/api/rag/query-with-context`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request)
+  })
 
-/**
- * Formata a confiança como porcentagem
- */
+  return handleResponse<RAGContextResult>(response)
+}
+
+export async function getDocumentosDisponiveis(): Promise<{
+  success: boolean
+  documentos: string[]
+  total: number
+}> {
+  const response = await fetch(`${API_BASE}/api/rag/documentos-disponiveis`)
+  return handleResponse(response)
+}
+
+export async function getProcessosTriagem(): Promise<{
+  success: boolean
+  processos: ProcessoTriagem[]
+  total: number
+}> {
+  const response = await fetch(`${API_BASE}/api/rag/processos-triagem`)
+  return handleResponse(response)
+}
+
 export function formatConfidence(confidence: number): string {
   return `${(confidence * 100).toFixed(1)}%`
 }
 
-/**
- * Formata o tempo de processamento
- */
 export function formatProcessingTime(time: number): string {
   if (time < 1) {
     return `${(time * 1000).toFixed(0)}ms`
@@ -276,9 +298,6 @@ export function formatProcessingTime(time: number): string {
   return `${time.toFixed(2)}s`
 }
 
-/**
- * Obtém a cor da estratégia para UI
- */
 export function getStrategyColor(strategy: string): string {
   const colors = {
     factual: 'blue',
@@ -290,9 +309,6 @@ export function getStrategyColor(strategy: string): string {
   return colors[strategy as keyof typeof colors] || colors.default
 }
 
-/**
- * Obtém a descrição da estratégia
- */
 export function getStrategyDescription(strategy: string): string {
   const descriptions = {
     factual: 'Busca informações específicas e objetivas',
@@ -304,9 +320,6 @@ export function getStrategyDescription(strategy: string): string {
   return descriptions[strategy as keyof typeof descriptions] || descriptions.default
 }
 
-/**
- * Valida se uma consulta é válida
- */
 export function validateQuery(query: string): { valid: boolean; error?: string } {
   if (!query || query.trim().length === 0) {
     return { valid: false, error: 'Consulta não pode estar vazia' }
@@ -323,9 +336,6 @@ export function validateQuery(query: string): { valid: boolean; error?: string }
   return { valid: true }
 }
 
-/**
- * Cria uma consulta formatada com filtros
- */
 export function buildFilteredQuery(baseQuery: string, filters: RAGSearchRequest['filters']): string {
   if (!filters) return baseQuery
 
@@ -352,18 +362,13 @@ export function buildFilteredQuery(baseQuery: string, filters: RAGSearchRequest[
   return `${baseQuery} considerando ${filterParts.join(', ')}`
 }
 
-/**
- * Extrai palavras-chave de uma consulta
- */
 export function extractKeywords(query: string): string[] {
-  // Remove pontuação e converte para minúsculas
   const cleaned = query
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 
-  // Remove palavras muito comuns
   const stopWords = new Set([
     'a', 'o', 'e', 'de', 'da', 'do', 'em', 'para', 'com', 'que', 'por',
     'qual', 'quais', 'como', 'quando', 'onde', 'porque', 'se', 'mais',
@@ -373,12 +378,9 @@ export function extractKeywords(query: string): string[] {
   return cleaned
     .split(' ')
     .filter(word => word.length > 2 && !stopWords.has(word))
-    .slice(0, 10) // Máximo 10 palavras-chave
+    .slice(0, 10)
 }
 
-/**
- * Sugere consultas relacionadas baseadas em palavras-chave
- */
 export function suggestRelatedQueries(keywords: string[]): string[] {
   const templates = [
     'Quais processos envolvem {keyword}?',
@@ -398,13 +400,81 @@ export function suggestRelatedQueries(keywords: string[]): string[] {
   return suggestions
 }
 
-// ==========================================
-// 🎯 HOOK COMPOSABLE PARA VUE
-// ==========================================
+export function filtrarDocumentos(documentos: string[], busca: string): string[] {
+  if (!busca.trim()) return documentos
 
-/**
- * Composable para usar o RAG no Vue
- */
+  const termo = busca.toLowerCase()
+  return documentos.filter(doc =>
+    doc.toLowerCase().includes(termo)
+  )
+}
+
+export function filtrarProcessos(
+  processos: ProcessoTriagem[],
+  filtros: {
+    tema?: string
+    status?: string
+    responsavel?: string
+    busca?: string
+  }
+): ProcessoTriagem[] {
+  let resultado = [...processos]
+
+  if (filtros.tema) {
+    resultado = resultado.filter(p => p.tema === filtros.tema)
+  }
+
+  if (filtros.status) {
+    resultado = resultado.filter(p => p.status === filtros.status)
+  }
+
+  if (filtros.responsavel) {
+    resultado = resultado.filter(p => p.responsavel === filtros.responsavel)
+  }
+
+  if (filtros.busca) {
+    const termo = filtros.busca.toLowerCase()
+    resultado = resultado.filter(p =>
+      p.numeroProcesso.toLowerCase().includes(termo) ||
+      p.tema.toLowerCase().includes(termo) ||
+      p.responsavel.toLowerCase().includes(termo)
+    )
+  }
+
+  return resultado
+}
+
+export function obterTemasUnicos(processos: ProcessoTriagem[]): string[] {
+  const temas = new Set(processos.map(p => p.tema))
+  return Array.from(temas).sort()
+}
+
+export function obterResponsaveisUnicos(processos: ProcessoTriagem[]): string[] {
+  const responsaveis = new Set(processos.map(p => p.responsavel))
+  return Array.from(responsaveis).sort()
+}
+
+export function obterStatusUnicos(processos: ProcessoTriagem[]): string[] {
+  const status = new Set(processos.map(p => p.status))
+  return Array.from(status).sort()
+}
+
+export function validarContexto(contexto: ContextConfig): { valid: boolean; error?: string } {
+  if (contexto.documentos.length === 0 && contexto.processos.length === 0) {
+    return { valid: false, error: 'Selecione pelo menos um documento ou processo' }
+  }
+
+  if (contexto.documentos.length > 50) {
+    return { valid: false, error: 'Máximo de 50 documentos permitidos' }
+  }
+
+  if (contexto.processos.length > 50) {
+    return { valid: false, error: 'Máximo de 50 processos permitidos' }
+  }
+
+  return { valid: true }
+}
+
 export function useRAG() {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -472,12 +542,161 @@ export function useRAG() {
   }
 }
 
-// ==========================================
-// 🔄 EXPORT DEFAULT
-// ==========================================
+export function useRAGWithContext() {
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+  const contextConfig = ref<ContextConfig>({
+    documentos: [],
+    processos: [],
+    incluir_metadata: true
+  })
+
+  const documentosDisponiveis = ref<string[]>([])
+  const processosTriagem = ref<ProcessoTriagem[]>([])
+  const isLoadingData = ref(false)
+
+  const carregarDadosIniciais = async () => {
+    try {
+      isLoadingData.value = true
+      error.value = null
+
+      const [docsResponse, processosResponse] = await Promise.all([
+        getDocumentosDisponiveis(),
+        getProcessosTriagem()
+      ])
+
+      if (docsResponse.success) {
+        documentosDisponiveis.value = docsResponse.documentos
+      }
+
+      if (processosResponse.success) {
+        processosTriagem.value = processosResponse.processos
+      }
+
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Erro ao carregar dados'
+      console.error('Erro ao carregar dados iniciais:', err)
+    } finally {
+      isLoadingData.value = false
+    }
+  }
+
+  const adicionarDocumento = (documento: string) => {
+    if (!contextConfig.value.documentos.includes(documento)) {
+      contextConfig.value.documentos.push(documento)
+    }
+  }
+
+  const removerDocumento = (documento: string) => {
+    const index = contextConfig.value.documentos.indexOf(documento)
+    if (index > -1) {
+      contextConfig.value.documentos.splice(index, 1)
+    }
+  }
+
+  const adicionarProcesso = (numeroProcesso: string) => {
+    if (!contextConfig.value.processos.includes(numeroProcesso)) {
+      contextConfig.value.processos.push(numeroProcesso)
+    }
+  }
+
+  const removerProcesso = (numeroProcesso: string) => {
+    const index = contextConfig.value.processos.indexOf(numeroProcesso)
+    if (index > -1) {
+      contextConfig.value.processos.splice(index, 1)
+    }
+  }
+
+  const toggleProcesso = (numeroProcesso: string) => {
+    if (contextConfig.value.processos.includes(numeroProcesso)) {
+      removerProcesso(numeroProcesso)
+    } else {
+      adicionarProcesso(numeroProcesso)
+    }
+  }
+
+  const limparContexto = () => {
+    contextConfig.value.documentos = []
+    contextConfig.value.processos = []
+  }
+
+  const consultarComContexto = async (
+    question: string,
+    k: number = 5
+  ): Promise<RAGContextResult | null> => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const validation = validateQuery(question)
+      if (!validation.valid) {
+        throw new Error(validation.error)
+      }
+
+      if (contextConfig.value.documentos.length === 0 &&
+        contextConfig.value.processos.length === 0) {
+        const result = await queryRAG({ question, context: [], query: question })
+        return result as RAGContextResult
+      }
+
+      const result = await queryRAGWithContext({
+        question,
+        context: contextConfig.value,
+        k
+      })
+
+      return result
+
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Erro na consulta'
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const temContexto = computed(() => {
+    return contextConfig.value.documentos.length > 0 ||
+      contextConfig.value.processos.length > 0
+  })
+
+  const totalItensContexto = computed(() => {
+    return contextConfig.value.documentos.length + contextConfig.value.processos.length
+  })
+
+  const resumoContexto = computed(() => {
+    const documentos = contextConfig.value.documentos.length
+    const processos = contextConfig.value.processos.length
+
+    const partes = []
+    if (documentos > 0) partes.push(`${documentos} documento(s)`)
+    if (processos > 0) partes.push(`${processos} processo(s)`)
+
+    return partes.join(' e ')
+  })
+
+  return {
+    isLoading: readonly(isLoading),
+    isLoadingData: readonly(isLoadingData),
+    error: readonly(error),
+    contextConfig: readonly(contextConfig),
+    documentosDisponiveis: readonly(documentosDisponiveis),
+    processosTriagem: readonly(processosTriagem),
+    temContexto,
+    totalItensContexto,
+    resumoContexto,
+    carregarDadosIniciais,
+    adicionarDocumento,
+    removerDocumento,
+    adicionarProcesso,
+    removerProcesso,
+    toggleProcesso,
+    limparContexto,
+    consultarComContexto
+  }
+}
 
 export default {
-  // API Functions
   getRAGStatus,
   queryRAG,
   searchRAG,
@@ -487,8 +706,9 @@ export default {
   getRAGHealth,
   analyzeProcess,
   getDashboardInsights,
-
-  // Utility Functions
+  queryRAGWithContext,
+  getDocumentosDisponiveis,
+  getProcessosTriagem,
   formatConfidence,
   formatProcessingTime,
   getStrategyColor,
@@ -497,10 +717,13 @@ export default {
   buildFilteredQuery,
   extractKeywords,
   suggestRelatedQueries,
-
-  // Vue Composable
+  filtrarDocumentos,
+  filtrarProcessos,
+  obterTemasUnicos,
+  obterResponsaveisUnicos,
+  obterStatusUnicos,
+  validarContexto,
   useRAG,
-
-  // Error Class
+  useRAGWithContext,
   RAGAPIError
 }
