@@ -216,7 +216,7 @@
             <!-- Botão de Filtros -->
             <button
               type="button"
-              @click="mostrarFiltros = !mostrarFiltros"
+              @click="abrirDrawerContexto"
               class="px-3 py-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               :class="{ 'bg-blue-50 text-blue-600': filtros.tema || filtros.status }"
               title="Filtros de busca"
@@ -349,9 +349,17 @@
       </div>
     </div>
   </div>
+  <ContextDrawer
+  v-if="mostrarDrawerContexto"
+  :processosSelecionados="processosSelecionados"
+  @confirmar="aplicarContextoSelecionado"
+  @fechar="mostrarDrawerContexto = false"
+/>
+
 </template>
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
+import ContextDrawer from '@/components/ContextDrawer.vue'
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import {
   getRAGStatus,
@@ -398,6 +406,18 @@ const sugestoes = ref<RAGSuggestion[]>([])
 
 const mostrarEstatisticas = ref(false)
 const mostrarFiltros = ref(false)
+
+const mostrarDrawerContexto = ref(false)
+const processosSelecionados = ref<string[]>([])
+
+function abrirDrawerContexto() {
+  mostrarDrawerContexto.value = true
+}
+
+function aplicarContextoSelecionado(novosProcessos: string[]) {
+  processosSelecionados.value = novosProcessos
+  mostrarDrawerContexto.value = false
+}
 
 const filtros = ref({
   tema: '',
@@ -480,7 +500,7 @@ async function enviarMensagem() {
   try {
     const resultado: RAGResult = await queryRAG({
       question: mensagemUsuario,
-      context: '',
+      context: processosSelecionados.value,
       query: ''
     })
     mensagens.value.push({
