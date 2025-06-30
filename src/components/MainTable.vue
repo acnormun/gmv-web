@@ -24,7 +24,8 @@
               <th class="text-left py-3 px-4 w-32">Tema</th>
               <th class="text-left py-3 px-4 w-36">Data da Distribuição</th>
               <th class="text-left py-3 px-4 w-28">Responsável</th>
-              <th class="text-left py-3 px-4 w-36">Status</th>
+              <th class="text-left py-3 px-8 w-36">Status</th>
+              <th class="text-left py-3 px-4 w-36">Prioridade</th>
               <th class="text-left py-3 px-4 w-36">Última Atualização</th>
               <th class="text-left py-3 px-4 w-20">Ações</th>
             </tr>
@@ -43,9 +44,10 @@
               <td class="py-3 px-4 truncate text-sm" :title="item.tema">{{ item.tema }}</td>
               <td class="py-3 px-4 text-sm">{{ item.dataDistribuicao }}</td>
               <td class="py-3 px-4 truncate text-sm" :title="item.responsavel">{{ item.responsavel }}</td>
-              <td class="py-3 px-4">
+              <td class="py-3 px-8">
                 <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap" :class="statusPillClass(item.status)">{{ item.status }}</span>
               </td>
+              <td class="py-3 px-4 truncate text-sm" :title="item.prioridade">{{ item.prioridade }}</td>
               <td class="py-3 px-4 text-sm">{{ item.ultimaAtualizacao }}</td>
               <td class="py-3 px-4 relative">
                 <button class="text-neutral-600 hover:text-neutral-900 mr-2" @click="abrirModal('view', item)" title="Visualizar processo">
@@ -185,7 +187,7 @@ function exportarTabelaParaPdf() {
   autoTable(doc, {
     head: [[
       'Nº Processo', 'Tema', 'Data da Distribuição',
-      'Responsável', 'Status', 'Última Atualização'
+      'Responsável', 'Status','Prioridade', 'Última Atualização'
     ]],
     body: lista.value.map(item => [
       item.numeroProcesso,
@@ -193,6 +195,7 @@ function exportarTabelaParaPdf() {
       item.dataDistribuicao,
       item.responsavel,
       item.status,
+      item.prioridade,
       item.ultimaAtualizacao,
     ]),
     margin: { top: 20 },
