@@ -48,7 +48,7 @@ const concluidos = ref(0)
 const revisao = ref(0)
 const emAtraso = ref(0)
 
-const icones = {
+const icones: Record<string, string> = {
   'CÍVEL': 'gavel-solid.svg',
   'TRABALHISTA': 'briefcase-solid.svg',
   'PENAL': 'scale-balanced-solid.svg',
@@ -80,10 +80,20 @@ const temasMaisAtuados = computed(() => {
     .map(([nome, total]) => ({
       nome,
       total,
-      //@ts-ignore
       icon: icones[nome] || 'folder-solid.svg'
     }))
 })
+
+interface Filtros {
+  numeroProcesso?: string;
+  tema?: string[];
+  dataDistribuicao?: string;
+  responsavel?: string[];
+  status?: string;
+  ultimaAtualizacao?: string;
+  suspeitos?: boolean;
+  tipoAtraso?: string;
+}
 
 async function atualizarProcessos() {
   await store.carregarProcessos()
@@ -96,80 +106,68 @@ async function atualizarProcessos() {
   emAtraso.value = store.processos.filter((p) => verificarProcessoEmAtraso(p)).length
 }
 
-function filtrarProcessos(filtros: Record<string, any>) {
-  console.log('🔍 Aplicando filtros:', filtros) // Debug
+function filtrarProcessos(filtros: Filtros) {
+  console.log('🔍 Aplicando filtros:', filtros)
 
   dadosFiltrados.value = store.processos.filter((proc) => {
-    // Filtro por número do processo
-    const filtroNumero = !filtros.numeroProcesso || 
+    const filtroNumero = !filtros.numeroProcesso ||
       proc.numeroProcesso.toLowerCase().includes(filtros.numeroProcesso.toLowerCase())
 
-    // Filtro por tema (array)
-    const filtroTema = !filtros.tema?.length || 
+    const filtroTema = !filtros.tema?.length ||
       filtros.tema.includes(proc.tema)
 
-    // Filtro por data de distribuição
-    const filtroDataDistribuicao = !filtros.dataDistribuicao || 
+    const filtroDataDistribuicao = !filtros.dataDistribuicao ||
       proc.dataDistribuicao === filtros.dataDistribuicao
 
-    // Filtro por responsável (array)
-    const filtroResponsavel = !filtros.responsavel?.length || 
+    const filtroResponsavel = !filtros.responsavel?.length ||
       filtros.responsavel.includes(proc.responsavel)
 
-    // Filtro por status
-    const filtroStatus = !filtros.status || 
+    const filtroStatus = !filtros.status ||
       proc.status === filtros.status
 
-    // Filtro por última atualização
-    const filtroUltimaAtualizacao = !filtros.ultimaAtualizacao || 
+    const filtroUltimaAtualizacao = !filtros.ultimaAtualizacao ||
       proc.ultimaAtualizacao === filtros.ultimaAtualizacao
 
-    // Filtro por suspeitos
-    const filtroSuspeitos = !filtros.suspeitos || 
+    const filtroSuspeitos = !filtros.suspeitos ||
       (proc.suspeitos && proc.suspeitos.length > 0)
 
-    // Filtro por tipo de atraso
     const filtroTipoAtraso = !filtros.tipoAtraso || verificarTipoAtraso(proc, filtros.tipoAtraso)
 
-    const resultado = filtroNumero && 
-                     filtroTema && 
-                     filtroDataDistribuicao && 
-                     filtroResponsavel && 
-                     filtroStatus && 
-                     filtroUltimaAtualizacao && 
+    const resultado = filtroNumero &&
+                     filtroTema &&
+                     filtroDataDistribuicao &&
+                     filtroResponsavel &&
+                     filtroStatus &&
+                     filtroUltimaAtualizacao &&
                      filtroSuspeitos &&
                      filtroTipoAtraso
 
     return resultado
   })
 
-  console.log('📊 Processos filtrados:', dadosFiltrados.value.length) // Debug
+  console.log('📊 Processos filtrados:', dadosFiltrados.value.length)
 }
 
-// Função para verificar se um processo está em atraso
 function verificarProcessoEmAtraso(processo: Processo): boolean {
-  // Se já está concluído, não está em atraso
   if (processo.status === 'Concluído') {
     return false
   }
 
   const hoje = new Date()
-  
-  // Verifica a última atualização (mais de 30 dias)
+
   if (processo.ultimaAtualizacao) {
     const ultimaAtualizacao = new Date(processo.ultimaAtualizacao)
     const diasSemAtualizacao = Math.floor((hoje.getTime() - ultimaAtualizacao.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (diasSemAtualizacao > 30) {
       return true
     }
   }
 
-  // Verifica a data de distribuição (mais de 60 dias sem conclusão)
   if (processo.dataDistribuicao) {
     const dataDistribuicao = new Date(processo.dataDistribuicao)
     const diasSemConclusao = Math.floor((hoje.getTime() - dataDistribuicao.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (diasSemConclusao > 60) {
       return true
     }
@@ -212,7 +210,7 @@ function verificarTipoAtraso(processo: Processo, tipoAtraso: string): boolean {
 }
 
 function limparFiltros() {
-  console.log('🧹 Limpando filtros') 
+  console.log('🧹 Limpando filtros')
   dadosFiltrados.value = [...store.processos]
 }
 

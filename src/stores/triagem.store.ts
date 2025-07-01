@@ -16,6 +16,7 @@ export const useTriagemStore = defineStore('triagem', () => {
     processos.value = data
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function filtrar(filtros: Record<string, any>) {
     return processos.value.filter((proc) => {
       return (

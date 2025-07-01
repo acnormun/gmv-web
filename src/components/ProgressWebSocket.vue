@@ -1,26 +1,44 @@
 <template>
-  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div v-if="isVisible && !isMinimized" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
       <div class="text-center">
-        <h3 class="text-lg font-semibold mb-4">Processando Documento</h3>
-        
-        <!-- Barra de progresso -->
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">
+            {{ taskData?.numeroProcesso || `Processo ${operationId?.slice(-8)}` }}
+          </h3>
+          <div class="flex items-center space-x-2">
+            <button
+              @click="minimize"
+              class="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors"
+              title="Minimizar progresso"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <button
+              @click="close"
+              class="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors"
+              title="Fechar"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
         <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
-          <div 
+          <div
             class="bg-blue-600 h-3 rounded-full transition-all duration-500"
             :style="{ width: `${progress.percentage}%` }"
           ></div>
         </div>
-        
-        <!-- Porcentagem -->
         <div class="text-lg font-semibold text-gray-800 mb-4">
           {{ progress.percentage.toFixed(0) }}%
         </div>
-        
-        <!-- Etapas -->
         <div class="space-y-3 mb-4">
-          <div 
-            v-for="(step, index) in steps" 
+          <div
+            v-for="(step, index) in steps"
             :key="index"
             class="flex items-center text-sm"
             :class="getStepClass(index + 1)"
@@ -34,25 +52,17 @@
             <span>{{ step }}</span>
           </div>
         </div>
-        
-        <!-- Mensagem atual -->
         <div class="text-sm text-blue-600 font-medium mb-4">
           {{ progress.message }}
         </div>
-        
-        <!-- Status da conexão -->
         <div class="text-xs text-gray-400 mb-2">
-          Conexão: {{ connectionStatus }}
+          Conexão: {{ store.connectionStatus }}
         </div>
-        
-        <!-- Erro se houver -->
         <div v-if="progress.error" class="text-sm text-red-600 mt-2 p-2 bg-red-50 rounded">
-          ❌ {{ progress.message }}
+          ❌ {{ progress.errorMessage || progress.message }}
         </div>
-        
-        <!-- Sucesso -->
-        <div v-if="progress.percentage >= 100 && !progress.error" class="text-sm text-green-600 mt-2 p-2 bg-green-50 rounded">
-          ✅ Processo adicionado com sucesso!
+        <div v-if="progress.completed" class="text-sm text-green-600 mt-2 p-2 bg-green-50 rounded">
+          ✅ Processo concluído com sucesso!
         </div>
       </div>
     </div>
@@ -60,36 +70,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch, onMounted } from 'vue'
-import { io, Socket } from 'socket.io-client'
-
-interface ProgressData {
-  step: number
-  message: string
-  percentage: number
-  operation_id?: string
-  error?: boolean
-}
+import { ref, computed, watch, onMounted } from 'vue'
+import { useProgressStore } from '@/stores/progress.store'
 
 const props = defineProps<{
   operationId: string | null
   visible: boolean
 }>()
 
-const emit = defineEmits(['complete', 'error'])
+const emit = defineEmits(['close', 'complete', 'error', 'progress'])
 
-const progress = ref<ProgressData>({
-  step: 0,
-  message: 'Conectando...',
-  percentage: 0,
-  error: false
+const store = useProgressStore()
+const isMinimized = ref(false)
+
+const taskData = computed(() => {
+  if (!props.operationId) return null
+  return store.inProgress.find(task => task.uuid === props.operationId) || null
 })
 
-const connectionStatus = ref('Desconectado')
+const progress = computed(() => {
+  if (!taskData.value) {
+    return {
+      step: 0,
+      message: 'Conectando...',
+      percentage: 0,
+      error: false,
+      errorMessage: '',
+      completed: false
+    }
+  }
+
+  return {
+    step: taskData.value.step,
+    message: taskData.value.message,
+    percentage: taskData.value.percentage,
+    error: taskData.value.error,
+    errorMessage: taskData.value.errorMessage,
+    completed: taskData.value.completed
+  }
+})
+
+const isVisible = computed(() => props.visible && props.operationId && !isMinimized.value)
 
 const steps = [
   'Validando dados',
-  'Analisando suspeitos', 
+  'Analisando suspeitos',
   'Preparando arquivos',
   'Salvando documento',
   'Salvando arquivo original',
@@ -98,9 +123,15 @@ const steps = [
   'Finalizando processo'
 ]
 
-const isVisible = computed(() => props.visible && props.operationId)
+function minimize() {
+  isMinimized.value = true
+  store.closeDetails()
+}
 
-let socket: Socket | null = null
+function close() {
+  emit('close')
+  store.closeDetails()
+}
 
 const getStepClass = (stepNumber: number) => {
   if (progress.value.step > stepNumber) {
@@ -122,184 +153,44 @@ const getStepIconClass = (stepNumber: number) => {
   }
 }
 
-const initializeSocket = () => {
-  console.log('🚀 Inicializando socket...')
-  
-  // Se já existe socket conectado, não cria outro
-  if (socket && socket.connected) {
-    console.log('✅ Socket já existe e está conectado, reutilizando...')
-    return
-  }
-  
-  if (socket) {
-    console.log('🔄 Desconectando socket existente...')
-    socket.disconnect()
-    socket = null
-  }
-  
-  // Conecta no backend (porta 5000)
-  socket = io('http://localhost:5000', {
-    transports: ['websocket', 'polling'],
-    timeout: 20000,
-    forceNew: true // Força nova conexão
-  })
-  
-  socket.on('connect', () => {
-    connectionStatus.value = 'Conectado'
-    console.log('🔌 WebSocket conectado ao backend')
-    // @ts-ignore
-    console.log('🆔 Socket ID:', socket.id)
-  })
-  
-  socket.on('disconnect', (reason) => {
-    connectionStatus.value = `Desconectado (${reason})`
-    console.log('🔌 WebSocket desconectado:', reason)
-  })
-  
-  socket.on('connect_error', (error) => {
-    connectionStatus.value = 'Erro de conexão'
-    console.error('❌ Erro na conexão WebSocket:', error)
-  })
-  
-  // Este é o evento que o backend manda!
-  socket.on('progress_update', (data: ProgressData) => {
-    console.log('📊 Progresso recebido:', data)
-    progress.value = data
-    
-    // Se chegou a 100% e não tem erro
-    if (data.percentage >= 100 && !data.error) {
-      setTimeout(() => {
-        emit('complete')
-      }, 2000) // Aguarda 2 segundos para mostrar sucesso
-    }
-    
-    // Se tem erro (step 0 geralmente indica erro)
-    if (data.error || (data.step === 0 && data.percentage === 0)) {
-      progress.value.error = true
-      setTimeout(() => {
-        emit('error', data.message)
-      }, 3000)
-    }
-  })
-  
-  // Adiciona listener para todos os eventos (debug)
-  socket.onAny((eventName, ...args) => {
-    console.log('📨 Evento WebSocket recebido:', eventName, args)
-  })
-}
+watch(() => progress.value, (newProgress, oldProgress) => {
+  if (!oldProgress) return
 
-// Variável para controlar se já está registrado
-let isRegistered = false
-let currentRegisteredId: string | null = null
+  emit('progress', newProgress)
 
-const startListening = (operationId: string) => {
-  console.log('🎯 === INICIANDO REGISTRO ===')
-  console.log('🆔 Operation ID:', operationId)
-  console.log('🔄 Já registrado?', isRegistered, 'para ID:', currentRegisteredId)
-  
-  // Se já está registrado para este mesmo ID, não registra novamente
-  if (isRegistered && currentRegisteredId === operationId) {
-    console.log('✅ Já registrado para este operation_id, pulando...')
-    return
+  if (newProgress.completed && !oldProgress.completed) {
+    setTimeout(() => {
+      emit('complete', newProgress)
+    }, 2000)
   }
-  
-  console.log('🔌 Socket existe?', !!socket)
-  console.log('🔌 Socket conectado?', socket?.connected)
-  console.log('🆔 Socket ID:', socket?.id)
-  
-  if (!socket) {
-    console.error('❌ Socket não existe!')
-    return
-  }
-  
-  if (!socket.connected) {
-    console.error('❌ Socket não conectado!')
-    return
-  }
-  
-  console.log('📤 Enviando start_listening...')
-  
-  // Adiciona listener para resposta (apenas uma vez)
-  socket.once('progress_update', (data) => {
-    console.log('✅ Primeira resposta recebida:', data)
-    isRegistered = true
-    currentRegisteredId = operationId
-  })
-  
-  socket.once('error', (error) => {
-    console.error('❌ Erro recebido:', error)
-    isRegistered = false
-    currentRegisteredId = null
-  })
-  
-  // Emite o evento
-  socket.emit('start_listening', { operation_id: operationId })
-  console.log('📤 start_listening enviado!')
-  
-  // Confirma se foi enviado
-  setTimeout(() => {
-    // @ts-ignore
-    console.log('⏰ Verificação após 1s: Socket ainda conectado?', socket.connected)
-    if (!isRegistered) {
-      console.log('⚠️ Ainda não registrado após 1s')
-    }
-  }, 1000)
-}
 
-// Inicializa socket quando componente monta
+  if (newProgress.error && !oldProgress.error) {
+    setTimeout(() => {
+      emit('error', newProgress.errorMessage || newProgress.message)
+    }, 1000)
+  }
+}, { deep: true })
+
 onMounted(() => {
-  console.log('🚀 Inicializando WebSocket...')
-  initializeSocket()
+  store.initializeSocket()
 })
 
-// Observa mudanças no operationId
 watch(() => props.operationId, (newId, oldId) => {
-  console.log('🔄 Watch operationId mudou:', { old: oldId, new: newId })
-  
-  if (newId && newId !== oldId) { // Só executa se realmente mudou
-    console.log('🆔 Novo operation ID detectado:', newId)
-    
-    // Reset progress
-    progress.value = {
-      step: 0,
-      message: 'Registrando canal de progresso...',
-      percentage: 0,
-      error: false
+  if (newId && newId !== oldId) {
+    console.log('🔄 ProgressWebSocket: Nova operação detectada:', newId)
+    if (!store.inProgress.find(t => t.uuid === newId)) {
+      store.addTask(newId)
     }
-    
-    // Reset registration status
-    isRegistered = false
-    currentRegisteredId = null
-    
-    // Função para tentar registrar
-    const tryRegister = () => {
-      if (socket?.connected) {
-        console.log('✅ Socket conectado, registrando...')
-        startListening(newId)
-      } else {
-        console.log('❌ Socket não conectado, inicializando...')
-        initializeSocket()
-        
-        // Aguarda conexão e registra (apenas uma vez)
-        socket?.once('connect', () => {
-          console.log('✅ Socket conectou, registrando após delay...')
-          setTimeout(() => {
-            startListening(newId)
-          }, 100)
-        })
-      }
-    }
-    
-    // Tenta registrar
-    tryRegister()
   }
 })
 
-// Cleanup quando componente desmonta
-onUnmounted(() => {
-  console.log('🧹 Desconectando WebSocket...')
-  if (socket) {
-    socket.disconnect()
+watch(() => progress.value.percentage, (newPercentage) => {
+  if (newPercentage > 0 && newPercentage < 100 && props.visible && !isMinimized.value) {
+    setTimeout(() => {
+      if (progress.value.percentage > 0 && progress.value.percentage < 100) {
+        minimize()
+      }
+    }, 3000)
   }
 })
 </script>

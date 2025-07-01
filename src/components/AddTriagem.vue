@@ -173,12 +173,6 @@
       </form>
     </div>
   </div>
-   <ProgressWebSocket
-    :operation-id="currentOperationId"
-    :visible="showProgress"
-    @complete="handleProgressComplete"
-    @error="handleProgressError"
-  />
 </template>
 
 <script setup lang="ts">
@@ -186,8 +180,8 @@ import { ref, watch, computed } from 'vue'
 import { pdfToMarkdown } from '@/utils/pdfToMarkdown'
 import { pdfToDat } from '@/utils/pdfToDat'
 import { useTriagemStore } from '@/stores/triagem.store'
+import { useProgressStore } from '@/stores/progress.store'
 import { updateProcesso } from '@/api/triagem'
-import ProgressWebSocket from './ProgressWebSocket.vue'
 
 const props = defineProps<{
   open: boolean
@@ -195,13 +189,14 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['close', 'added'])
-const store = useTriagemStore()
+
+const triagemStore = useTriagemStore()
+const progressStore = useProgressStore()
+
 const arquivoPdf = ref<File | null>(null)
 const processoAntigo = ref('')
 const loading = ref(false)
 const debugMode = ref(false)
-const showProgress = ref(false)
-const currentOperationId = ref<string | null>(null)
 
 const form = ref<{
   numeroProcesso: string
@@ -274,7 +269,7 @@ watch(
         arquivoPdf.value = null
         processoAntigo.value = ''
       } else {
-        const processo = store.processoSelecionado
+        const processo = triagemStore.processoSelecionado
         if (processo) {
           const { ...processoSemUltimaAtt } = processo
           form.value = {
@@ -323,7 +318,6 @@ async function submit() {
 
     if (props.mode === 'new') {
       console.log('🚀 Iniciando adição de processo...')
-      showProgress.value = true
 
       const response = await fetch('http://localhost:5000/triagem/form', {
         method: 'POST',
@@ -339,13 +333,26 @@ async function submit() {
         throw new Error(result.error || 'Erro ao adicionar processo')
       }
 
-      currentOperationId.value = result.operation_id
-      console.log('🆔 Operation ID recebido:', result.operation_id)
+      const operationId = result.operation_id
+      const numeroProcesso = form.value.numeroProcesso
+
+      console.log('🆔 Adicionando à store global:', { operationId, numeroProcesso })
+
+      progressStore.addTask(operationId, numeroProcesso)
+
+      console.log('✅ Task adicionada à store global!')
+      console.log('📊 Tasks ativas:', progressStore.activeTasks.length)
+      console.log('🔗 Interface minimizada:', progressStore.minimized)
+
+      emit('added', operationId)
+      emit('close')
 
     } else if (props.mode === 'edit') {
       loading.value = true
       await updateProcesso(processoAntigo.value, payload)
-      handleProgressComplete()
+
+      emit('added')
+      emit('close')
     }
 
   } catch (err) {
@@ -356,26 +363,9 @@ async function submit() {
       errorMessage = err
     }
     console.error('❌ Erro no submit:', err)
-    handleProgressError(errorMessage)
+    alert(`Erro: ${errorMessage}`)
+  } finally {
+    loading.value = false
   }
-}
-
-function handleProgressComplete() {
-  console.log('✅ Progresso completado!')
-  showProgress.value = false
-  currentOperationId.value = null
-  loading.value = false
-
-  emit('added')
-  emit('close')
-}
-
-function handleProgressError(errorMessage: string) {
-  console.error('❌ Erro no progresso:', errorMessage)
-  showProgress.value = false
-  currentOperationId.value = null
-  loading.value = false
-
-  alert(`Erro: ${errorMessage}`)
 }
 </script>
