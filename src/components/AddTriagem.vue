@@ -57,6 +57,20 @@
         </div>
 
         <div>
+          <label class="block text-sm text-neutral-500 mb-1">Prioridade</label>
+          <select
+            v-model="form.prioridade"
+            :disabled="isView"
+            class="w-full border border-neutral-200 rounded-md px-3 py-2 bg-neutral-50 text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-300"
+            required
+          >
+            <option value="BAIXA">🟢 Baixa</option>
+            <option value="MÉDIA">🟡 Média</option>
+            <option value="ALTA">🔴 Alta</option>
+          </select>
+        </div>
+
+        <div>
           <label class="block text-sm text-neutral-500 mb-1">Data da Distribuição</label>
           <div class="relative">
             <input
@@ -102,8 +116,6 @@
           </select>
         </div>
 
-        <!-- Campo removido: Última Atualização será setada automaticamente pelo backend -->
-
         <div>
           <label class="block text-sm text-neutral-500 mb-1">Anexo</label>
           <div class="flex items-center space-x-3">
@@ -132,7 +144,6 @@
           ></textarea>
         </div>
 
-        <!-- Debug info (apenas em modo de desenvolvimento) -->
         <div v-if="debugMode" class="text-xs bg-gray-100 p-2 rounded">
           <div><strong>Form Data:</strong></div>
           <pre>{{ JSON.stringify(form, null, 2) }}</pre>
@@ -162,13 +173,6 @@
       </form>
     </div>
   </div>
-  <!-- Modal de progresso -->
-   <ProgressWebSocket 
-    :operation-id="currentOperationId"
-    :visible="showProgress"
-    @complete="handleProgressComplete"
-    @error="handleProgressError"
-  />
 </template>
 
 <script setup lang="ts">
@@ -176,8 +180,8 @@ import { ref, watch, computed } from 'vue'
 import { pdfToMarkdown } from '@/utils/pdfToMarkdown'
 import { pdfToDat } from '@/utils/pdfToDat'
 import { useTriagemStore } from '@/stores/triagem.store'
-import { addProcesso, updateProcesso } from '@/api/triagem'
-import ProgressWebSocket from './ProgressWebSocket.vue'
+import { useProgressStore } from '@/stores/progress.store'
+import { updateProcesso } from '@/api/triagem'
 
 const props = defineProps<{
   open: boolean
@@ -185,18 +189,19 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['close', 'added'])
-const store = useTriagemStore()
+
+const triagemStore = useTriagemStore()
+const progressStore = useProgressStore()
+
 const arquivoPdf = ref<File | null>(null)
 const processoAntigo = ref('')
 const loading = ref(false)
 const debugMode = ref(false)
-const showProgress = ref(false)
-const currentOperationId = ref<string | null>(null)
 
-// Formulário sem campo ultimaAtualizacao
 const form = ref<{
   numeroProcesso: string
   tema: string
+  prioridade: string
   dataDistribuicao: string
   responsavel: string
   status: string
@@ -205,11 +210,12 @@ const form = ref<{
 }>({
   numeroProcesso: '',
   tema: '',
+  prioridade: 'MÉDIA',
   dataDistribuicao: '',
   responsavel: '',
   status: 'Em andamento',
   comentarios: '',
-  suspeitos: [], // Apenas para visualização
+  suspeitos: [],
 })
 
 const isView = computed(() => props.mode === 'view')
@@ -253,6 +259,7 @@ watch(
         form.value = {
           numeroProcesso: '',
           tema: '',
+          prioridade: 'MÉDIA',
           dataDistribuicao: '',
           responsavel: '',
           status: 'Em andamento',
@@ -262,11 +269,12 @@ watch(
         arquivoPdf.value = null
         processoAntigo.value = ''
       } else {
-        const processo = store.processoSelecionado
+        const processo = triagemStore.processoSelecionado
         if (processo) {
-          const { ultimaAtualizacao, ...processoSemUltimaAtt } = processo
-          form.value = { 
+          const { ...processoSemUltimaAtt } = processo
+          form.value = {
             ...processoSemUltimaAtt,
+            prioridade: processo.prioridade || 'MÉDIA',
             suspeitos: Array.isArray(processo.suspeitos)
               ? processo.suspeitos.filter((s): s is string => typeof s === 'string')
               : []
@@ -289,8 +297,7 @@ async function submit() {
   try {
     let markdown = ''
     let dat = ''
-    
-    // Processa PDF se houver
+
     if (arquivoPdf.value) {
       loading.value = true
       markdown = await pdfToMarkdown(arquivoPdf.value)
@@ -298,20 +305,20 @@ async function submit() {
       loading.value = false
     }
 
-    const { suspeitos, ...formSemSuspeitos } = form.value
+    const { ...formSemSuspeitos } = form.value
 
     const payload = {
       ...formSemSuspeitos,
+      prioridade: formSemSuspeitos.prioridade as 'MÉDIA' | 'BAIXA' | 'ALTA',
       markdown,
       dat,
     }
 
+    console.log('📋 Payload enviado:', payload)
+
     if (props.mode === 'new') {
       console.log('🚀 Iniciando adição de processo...')
-      
-      // IMPORTANTE: Mostra o modal ANTES do fetch
-      showProgress.value = true
-      
+
       const response = await fetch('http://localhost:5000/triagem/form', {
         method: 'POST',
         headers: {
@@ -321,45 +328,44 @@ async function submit() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Erro ao adicionar processo')
       }
-      
-      // Define o operation_id para o componente de progresso
-      currentOperationId.value = result.operation_id
-      console.log('🆔 Operation ID recebido:', result.operation_id)
-      
+
+      const operationId = result.operation_id
+      const numeroProcesso = form.value.numeroProcesso
+
+      console.log('🆔 Adicionando à store global:', { operationId, numeroProcesso })
+
+      progressStore.addTask(operationId, numeroProcesso)
+
+      console.log('✅ Task adicionada à store global!')
+      console.log('📊 Tasks ativas:', progressStore.activeTasks.length)
+      console.log('🔗 Interface minimizada:', progressStore.minimized)
+
+      emit('added', operationId)
+      emit('close')
+
     } else if (props.mode === 'edit') {
-      // Para edição, usa método antigo
       loading.value = true
       await updateProcesso(processoAntigo.value, payload)
-      handleProgressComplete()
+
+      emit('added')
+      emit('close')
     }
 
   } catch (err) {
+    let errorMessage = 'Erro ao salvar processo'
+    if (err instanceof Error) {
+      errorMessage = err.message
+    } else if (typeof err === 'string') {
+      errorMessage = err
+    }
     console.error('❌ Erro no submit:', err)
-    //@ts-ignore
-    handleProgressError(err.message || 'Erro ao salvar processo')
+    alert(`Erro: ${errorMessage}`)
+  } finally {
+    loading.value = false
   }
-}
-
-function handleProgressComplete() {
-  console.log('✅ Progresso completado!')
-  showProgress.value = false
-  currentOperationId.value = null
-  loading.value = false
-  
-  emit('added')
-  emit('close')
-}
-
-function handleProgressError(errorMessage: string) {
-  console.error('❌ Erro no progresso:', errorMessage)
-  showProgress.value = false
-  currentOperationId.value = null
-  loading.value = false
-  
-  alert(`Erro: ${errorMessage}`)
 }
 </script>

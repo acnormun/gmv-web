@@ -1,6 +1,7 @@
 export interface ProcessoForm {
   numeroProcesso: string
   tema: string
+  prioridade: 'BAIXA' | 'MÉDIA' | 'ALTA'
   dataDistribuicao: string
   responsavel: string
   status: string
