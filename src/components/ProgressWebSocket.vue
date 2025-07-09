@@ -63,6 +63,9 @@
         </div>
         <div v-if="progress.completed" class="text-sm text-green-600 mt-2 p-2 bg-green-50 rounded">
           ✅ Processo concluído com sucesso!
+          <div v-if="autoCloseCountdown > 0" class="text-xs text-gray-500 mt-1">
+            Fechando em {{ autoCloseCountdown }}s...
+          </div>
         </div>
       </div>
     </div>
@@ -70,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useProgressStore } from '@/stores/progress.store'
 
 const props = defineProps<{
@@ -82,6 +85,9 @@ const emit = defineEmits(['close', 'complete', 'error', 'progress'])
 
 const store = useProgressStore()
 const isMinimized = ref(false)
+const autoCloseCountdown = ref(0)
+let autoCloseTimer: NodeJS.Timeout | null = null
+let countdownInterval: NodeJS.Timeout | null = null
 
 const taskData = computed(() => {
   if (!props.operationId) return null
@@ -100,9 +106,20 @@ const progress = computed(() => {
     }
   }
 
+  let actualStep = taskData.value.step || getStepFromPercentage(taskData.value.percentage)
+  
+  // Garante que o step seja válido (entre 1 e 12)
+  actualStep = Math.max(1, Math.min(12, actualStep))
+  
+  // Usa a mensagem do backend se disponível, senão usa o label do step
+  let displayMessage = taskData.value.message
+  if (!displayMessage || displayMessage === 'Conectando...' || displayMessage === 'Iniciando processamento...') {
+    displayMessage = stepLabels[actualStep] || taskData.value.message
+  }
+
   return {
-    step: taskData.value.step,
-    message: taskData.value.message,
+    step: actualStep,
+    message: displayMessage,
     percentage: taskData.value.percentage,
     error: taskData.value.error,
     errorMessage: taskData.value.errorMessage,
@@ -112,25 +129,96 @@ const progress = computed(() => {
 
 const isVisible = computed(() => props.visible && props.operationId && !isMinimized.value)
 
+// Mapeamento baseado na análise dos logs reais do backend
+const stepLabels = {
+  1: 'Conectando...',
+  2: 'Validando dados',
+  3: 'Processando PDF do PJe',
+  4: 'Analisando suspeição',
+  5: 'Preparando arquivos',
+  6: 'Salvando markdown',
+  7: 'Atualizando busca',
+  8: 'Executando anonimização',
+  9: 'Salvando versão anonimizada',
+  10: 'Atualizando tabela',
+  11: 'Enviando notificação',
+  12: 'Processo concluído'
+}
+
+// Função para determinar o step baseado na porcentagem se o step não estiver definido
+const getStepFromPercentage = (percentage: number) => {
+  if (percentage >= 100) return 12
+  if (percentage >= 95) return 11
+  if (percentage >= 90) return 10
+  if (percentage >= 80) return 9
+  if (percentage >= 75) return 8
+  if (percentage >= 65) return 7
+  if (percentage >= 55) return 6
+  if (percentage >= 45) return 5
+  if (percentage >= 35) return 4
+  if (percentage >= 25) return 3
+  if (percentage >= 10) return 2
+  return 1
+}
+
+// Array ordenado para exibição na interface
 const steps = [
+  'Conectando...',
   'Validando dados',
-  'Analisando suspeitos',
+  'Processando PDF do PJe',
+  'Analisando suspeição',
   'Preparando arquivos',
-  'Salvando documento',
-  'Salvando arquivo original',
-  'Gerando anonimização',
+  'Salvando markdown',
+  'Atualizando busca',
+  'Executando anonimização',
+  'Salvando versão anonimizada',
   'Atualizando tabela',
-  'Finalizando processo'
+  'Enviando notificação',
+  'Processo concluído'
 ]
 
 function minimize() {
   isMinimized.value = true
   store.closeDetails()
+  clearAutoCloseTimers()
 }
 
 function close() {
+  clearAutoCloseTimers()
   emit('close')
   store.closeDetails()
+}
+
+function clearAutoCloseTimers() {
+  if (autoCloseTimer) {
+    clearTimeout(autoCloseTimer)
+    autoCloseTimer = null
+  }
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
+  }
+  autoCloseCountdown.value = 0
+}
+
+function startAutoClose() {
+  console.log('🕐 Iniciando fechamento automático em 3 segundos...')
+  autoCloseCountdown.value = 3
+  
+  // Countdown visual
+  countdownInterval = setInterval(() => {
+    autoCloseCountdown.value--
+    if (autoCloseCountdown.value <= 0) {
+      clearInterval(countdownInterval!)
+      countdownInterval = null
+    }
+  }, 1000)
+  
+  // Fechamento automático
+  autoCloseTimer = setTimeout(() => {
+    console.log('🔒 Fechando janela automaticamente após conclusão')
+    close()
+  }, 3000)
 }
 
 const getStepClass = (stepNumber: number) => {
@@ -159,12 +247,19 @@ watch(() => progress.value, (newProgress, oldProgress) => {
   emit('progress', newProgress)
 
   if (newProgress.completed && !oldProgress.completed) {
+    console.log('✅ Processo concluído, iniciando fechamento automático')
+    
+    // Emitir evento de conclusão
     setTimeout(() => {
       emit('complete', newProgress)
-    }, 2000)
+    }, 500)
+    
+    // Iniciar fechamento automático após 3 segundos
+    startAutoClose()
   }
 
   if (newProgress.error && !oldProgress.error) {
+    clearAutoCloseTimers() // Não fechar automaticamente em caso de erro
     setTimeout(() => {
       emit('error', newProgress.errorMessage || newProgress.message)
     }, 1000)
@@ -175,12 +270,25 @@ onMounted(() => {
   store.initializeSocket()
 })
 
+onUnmounted(() => {
+  clearAutoCloseTimers()
+})
+
 watch(() => props.operationId, (newId, oldId) => {
   if (newId && newId !== oldId) {
     console.log('🔄 ProgressWebSocket: Nova operação detectada:', newId)
+    clearAutoCloseTimers() // Limpar timers da operação anterior
+    
     if (!store.inProgress.find(t => t.uuid === newId)) {
       store.addTask(newId)
     }
+  }
+})
+
+watch(() => props.visible, (newVisible, oldVisible) => {
+  // Se a janela for fechada manualmente, limpar os timers
+  if (oldVisible && !newVisible) {
+    clearAutoCloseTimers()
   }
 })
 
