@@ -149,7 +149,6 @@ export const useProgressStore = defineStore('progresso', () => {
     }
 
     if (data.error) {
-      // Prefer explicit errorMessage, fallback to message
       task.errorMessage = data.errorMessage ?? data.message
       task.inProgress = false
     }

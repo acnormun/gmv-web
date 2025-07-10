@@ -38,7 +38,7 @@
         </div>
         <div class="space-y-3 mb-4">
           <div
-            v-for="(step, index) in steps"
+            v-for="(step, index) in stepsToShow"
             :key="index"
             class="flex items-center text-sm"
             :class="getStepClass(index + 1)"
@@ -75,6 +75,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useProgressStore } from '@/stores/progress.store'
+import { useTriagemStore } from '@/stores/triagem.store'
 
 const props = defineProps<{
   operationId: string | null
@@ -84,10 +85,13 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'complete', 'error', 'progress'])
 
 const store = useProgressStore()
+const triagemStore = useTriagemStore()
 const isMinimized = ref(false)
 const autoCloseCountdown = ref(0)
-let autoCloseTimer: NodeJS.Timeout | null = null
-let countdownInterval: NodeJS.Timeout | null = null
+
+// Usando ReturnType para evitar erro do TypeScript
+let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
+let countdownInterval: ReturnType<typeof setInterval> | null = null
 
 const taskData = computed(() => {
   if (!props.operationId) return null
@@ -107,19 +111,11 @@ const progress = computed(() => {
   }
 
   let actualStep = taskData.value.step || getStepFromPercentage(taskData.value.percentage)
+  actualStep = Math.max(1, Math.min(10, actualStep))
   
-  // Garante que o step seja válido (entre 1 e 12)
-  actualStep = Math.max(1, Math.min(12, actualStep))
-  
-  // Usa a mensagem do backend se disponível, senão usa o label do step
-  let displayMessage = taskData.value.message
-  if (!displayMessage || displayMessage === 'Conectando...' || displayMessage === 'Iniciando processamento...') {
-    displayMessage = stepLabels[actualStep] || taskData.value.message
-  }
-
   return {
     step: actualStep,
-    message: displayMessage,
+    message: taskData.value.message || getMessageFromStep(actualStep),
     percentage: taskData.value.percentage,
     error: taskData.value.error,
     errorMessage: taskData.value.errorMessage,
@@ -129,53 +125,61 @@ const progress = computed(() => {
 
 const isVisible = computed(() => props.visible && props.operationId && !isMinimized.value)
 
-// Mapeamento baseado na análise dos logs reais do backend
-const stepLabels = {
-  1: 'Conectando...',
-  2: 'Validando dados',
-  3: 'Processando PDF do PJe',
-  4: 'Analisando suspeição',
-  5: 'Preparando arquivos',
-  6: 'Salvando markdown',
-  7: 'Atualizando busca',
-  8: 'Executando anonimização',
-  9: 'Salvando versão anonimizada',
-  10: 'Atualizando tabela',
-  11: 'Enviando notificação',
-  12: 'Processo concluído'
-}
-
-// Função para determinar o step baseado na porcentagem se o step não estiver definido
 const getStepFromPercentage = (percentage: number) => {
-  if (percentage >= 100) return 12
-  if (percentage >= 95) return 11
-  if (percentage >= 90) return 10
-  if (percentage >= 80) return 9
-  if (percentage >= 75) return 8
-  if (percentage >= 65) return 7
-  if (percentage >= 55) return 6
-  if (percentage >= 45) return 5
-  if (percentage >= 35) return 4
+  if (percentage >= 100) return 10
+  if (percentage >= 90) return 9
+  if (percentage >= 85) return 8
+  if (percentage >= 80) return 7
+  if (percentage >= 70) return 6
+  if (percentage >= 60) return 5
+  if (percentage >= 40) return 4
   if (percentage >= 25) return 3
   if (percentage >= 10) return 2
   return 1
 }
 
-// Array ordenado para exibição na interface
-const steps = [
-  'Conectando...',
-  'Validando dados',
-  'Processando PDF do PJe',
-  'Analisando suspeição',
-  'Preparando arquivos',
-  'Salvando markdown',
-  'Atualizando busca',
-  'Executando anonimização',
-  'Salvando versão anonimizada',
-  'Atualizando tabela',
-  'Enviando notificação',
-  'Processo concluído'
-]
+const getMessageFromStep = (step: number) => {
+  const messages: Record<number, string> = {
+    1: 'Iniciando processamento...',
+    2: 'Validando dados do processo...',
+    3: 'Analisando suspeição...',
+    4: 'Preparando arquivos...',
+    5: 'Processando anonimização...',
+    6: 'Salvando arquivos...',
+    7: 'Atualizando tabela de triagem...',
+    8: 'Tabela atualizada com sucesso!',
+    9: 'Iniciando notificação por email...',
+    10: 'Processo concluído com sucesso!'
+  }
+  return messages[step] || `Processando... (${step})`
+}
+
+// Corrigir array de steps para corresponder ao backend (10 steps)
+const stepsToShow = computed(() => {
+  const backendSteps = [
+    'Iniciando processamento',           // step 1 (5%)
+    'Validando dados do processo',       // step 2 (10%)
+    'Analisando suspeição',              // step 3 (25%)
+    'Preparando arquivos',               // step 4 (40%)
+    'Processando anonimização',          // step 5 (60%) ← ANONIMIZAÇÃO AQUI!
+    'Salvando arquivos',                 // step 6 (70%)
+    'Atualizando tabela de triagem',     // step 7 (80%)
+    'Tabela atualizada',                 // step 8 (85%)
+    'Enviando notificação por email',    // step 9 (90%)
+    'Processo concluído'                 // step 10 (100%)
+  ]
+  
+  const currentStep = progress.value.step
+  if (currentStep > backendSteps.length) {
+    const extraSteps = []
+    for (let i = backendSteps.length + 1; i <= currentStep; i++) {
+      extraSteps.push(`Etapa ${i}`)
+    }
+    return [...backendSteps, ...extraSteps]
+  }
+  
+  return backendSteps
+})
 
 function minimize() {
   isMinimized.value = true
@@ -190,11 +194,11 @@ function close() {
 }
 
 function clearAutoCloseTimers() {
-  if (autoCloseTimer) {
+  if (autoCloseTimer !== null) {
     clearTimeout(autoCloseTimer)
     autoCloseTimer = null
   }
-  if (countdownInterval) {
+  if (countdownInterval !== null) {
     clearInterval(countdownInterval)
     countdownInterval = null
   }
@@ -205,20 +209,30 @@ function startAutoClose() {
   console.log('🕐 Iniciando fechamento automático em 3 segundos...')
   autoCloseCountdown.value = 3
   
-  // Countdown visual
   countdownInterval = setInterval(() => {
     autoCloseCountdown.value--
     if (autoCloseCountdown.value <= 0) {
-      clearInterval(countdownInterval!)
-      countdownInterval = null
+      if (countdownInterval !== null) {
+        clearInterval(countdownInterval)
+        countdownInterval = null
+      }
     }
   }, 1000)
   
-  // Fechamento automático
   autoCloseTimer = setTimeout(() => {
     console.log('🔒 Fechando janela automaticamente após conclusão')
     close()
   }, 3000)
+}
+
+async function recarregarProcessos() {
+  try {
+    console.log('🔄 Recarregando lista de processos...')
+    await triagemStore.carregarProcessos()
+    console.log('✅ Lista de processos atualizada com sucesso')
+  } catch (error) {
+    console.error('❌ Erro ao recarregar processos:', error)
+  }
 }
 
 const getStepClass = (stepNumber: number) => {
@@ -241,25 +255,28 @@ const getStepIconClass = (stepNumber: number) => {
   }
 }
 
-watch(() => progress.value, (newProgress, oldProgress) => {
+watch(() => progress.value, async (newProgress, oldProgress) => {
   if (!oldProgress) return
 
   emit('progress', newProgress)
 
   if (newProgress.completed && !oldProgress.completed) {
-    console.log('✅ Processo concluído, iniciando fechamento automático')
+    console.log('✅ Processo concluído, iniciando ações de finalização')
     
-    // Emitir evento de conclusão
+    // 1. Recarregar lista de processos
+    await recarregarProcessos()
+    
+    // 2. Emitir evento de conclusão
     setTimeout(() => {
       emit('complete', newProgress)
     }, 500)
     
-    // Iniciar fechamento automático após 3 segundos
+    // 3. Iniciar fechamento automático
     startAutoClose()
   }
 
   if (newProgress.error && !oldProgress.error) {
-    clearAutoCloseTimers() // Não fechar automaticamente em caso de erro
+    clearAutoCloseTimers()
     setTimeout(() => {
       emit('error', newProgress.errorMessage || newProgress.message)
     }, 1000)
@@ -277,7 +294,7 @@ onUnmounted(() => {
 watch(() => props.operationId, (newId, oldId) => {
   if (newId && newId !== oldId) {
     console.log('🔄 ProgressWebSocket: Nova operação detectada:', newId)
-    clearAutoCloseTimers() // Limpar timers da operação anterior
+    clearAutoCloseTimers()
     
     if (!store.inProgress.find(t => t.uuid === newId)) {
       store.addTask(newId)
@@ -286,7 +303,6 @@ watch(() => props.operationId, (newId, oldId) => {
 })
 
 watch(() => props.visible, (newVisible, oldVisible) => {
-  // Se a janela for fechada manualmente, limpar os timers
   if (oldVisible && !newVisible) {
     clearAutoCloseTimers()
   }
