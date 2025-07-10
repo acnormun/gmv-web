@@ -25,7 +25,7 @@ export async function getProcessos(): Promise<Processo[]> {
   return await res.json()
 }
 
-export async function addProcesso(processo: ProcessoForm): Promise<void> {
+export async function addProcesso(processo: ProcessoForm): Promise<any> {
   console.log('📤 Enviando novo processo:', processo)
 
   const res = await fetch(`${API_BASE}/triagem/form`, {
@@ -43,6 +43,7 @@ export async function addProcesso(processo: ProcessoForm): Promise<void> {
   }
 
   console.log('✅ Processo adicionado com sucesso')
+  return res
 }
 
 export async function updateProcesso(

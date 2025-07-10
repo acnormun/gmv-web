@@ -36,6 +36,7 @@ export const useProgressStore = defineStore('progresso', () => {
   )
 
   const hasActiveTasks = computed(() => activeTasks.value.length > 0)
+  const hasTasks = computed(() => inProgress.value.length > 0)
 
   const selectedTaskData = computed(() =>
     selectedTask.value ? inProgress.value.find(t => t.uuid === selectedTask.value) : null
@@ -230,6 +231,7 @@ export const useProgressStore = defineStore('progresso', () => {
     completedTasks,
     errorTasks,
     hasActiveTasks,
+    hasTasks,
     selectedTaskData,
     initializeSocket,
     addTask,
