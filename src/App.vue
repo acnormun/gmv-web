@@ -90,20 +90,25 @@
     </div>
   </main>
 
-  <!-- Interface Global de Progresso -->
   <GlobalProgressInterface />
-
-  <!-- Botão para reexibir interface se foi ocultada -->
-  <div v-if="!progressStore.minimized && progressStore.hasActiveTasks" class="fixed bottom-4 left-4 z-50">
+  <div v-if="!progressStore.minimized && progressStore.hasTasks" class="fixed bottom-4 left-4 z-50">
     <button
       @click="progressStore.showInterface()"
       class="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
       title="Mostrar progresso dos processos"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+         <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M13 10V3L4 14h7v7l9-11h-7z"
+        ></path>
       </svg>
-      <span v-if="progressStore.activeTasks.length > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+      <span
+        v-if="progressStore.activeTasks.length > 0"
+        class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center"
+      >
         {{ progressStore.activeTasks.length }}
       </span>
     </button>

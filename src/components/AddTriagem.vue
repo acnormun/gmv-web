@@ -181,7 +181,7 @@ import { pdfToMarkdown } from '@/utils/pdfToMarkdown'
 import { pdfToDat } from '@/utils/pdfToDat'
 import { useTriagemStore } from '@/stores/triagem.store'
 import { useProgressStore } from '@/stores/progress.store'
-import { updateProcesso } from '@/api/triagem'
+import { updateProcesso, addProcesso } from '@/api/triagem'
 
 const props = defineProps<{
   open: boolean
@@ -319,13 +319,7 @@ async function submit() {
     if (props.mode === 'new') {
       console.log('🚀 Iniciando adição de processo...')
 
-      const response = await fetch('http://localhost:5000/triagem/form', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
+      const response = await addProcesso(payload)
 
       const result = await response.json()
 
@@ -336,16 +330,13 @@ async function submit() {
       const operationId = result.operation_id
       const numeroProcesso = form.value.numeroProcesso
 
-      console.log('🆔 Adicionando à store global:', { operationId, numeroProcesso })
-
       progressStore.addTask(operationId, numeroProcesso)
 
-      console.log('✅ Task adicionada à store global!')
-      console.log('📊 Tasks ativas:', progressStore.activeTasks.length)
-      console.log('🔗 Interface minimizada:', progressStore.minimized)
 
-      emit('added', operationId)
-      emit('close')
+      setTimeout(() => {
+        emit('added', operationId)
+        emit('close')
+      }, 500);
 
     } else if (props.mode === 'edit') {
       loading.value = true

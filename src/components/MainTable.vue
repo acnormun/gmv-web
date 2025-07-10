@@ -12,7 +12,7 @@
             <img src="@/assets/plus-solid.svg" class="w-4 h-4" />
             Novo Processo
           </button>
-          <AddTriagem :open="showModal" :mode="modalMode" @close="showModal = false" @added="solicitarAtualizacao" />
+          <AddTriagem :open="showModal" :mode="modalMode" @close="showModal = false" />
         </div>
       </div>
 
@@ -110,7 +110,7 @@ const props = defineProps<{
   data: Processo[]
 }>()
 
-const lista = computed(() => props.data)
+const lista = computed(() => store.processos)
 
 const totalPaginas = computed(() =>
   Math.ceil(lista.value.length / itensPorPagina)

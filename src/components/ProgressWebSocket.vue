@@ -38,7 +38,7 @@
         </div>
         <div class="space-y-3 mb-4">
           <div
-            v-for="(step, index) in steps"
+            v-for="(step, index) in stepsToShow"
             :key="index"
             class="flex items-center text-sm"
             :class="getStepClass(index + 1)"
@@ -63,6 +63,9 @@
         </div>
         <div v-if="progress.completed" class="text-sm text-green-600 mt-2 p-2 bg-green-50 rounded">
           ✅ Processo concluído com sucesso!
+          <div v-if="autoCloseCountdown > 0" class="text-xs text-gray-500 mt-1">
+            Fechando em {{ autoCloseCountdown }}s...
+          </div>
         </div>
       </div>
     </div>
@@ -70,8 +73,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useProgressStore } from '@/stores/progress.store'
+import { useTriagemStore } from '@/stores/triagem.store'
 
 const props = defineProps<{
   operationId: string | null
@@ -81,7 +85,12 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'complete', 'error', 'progress'])
 
 const store = useProgressStore()
+const triagemStore = useTriagemStore()
 const isMinimized = ref(false)
+const autoCloseCountdown = ref(0)
+
+let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
+let countdownInterval: ReturnType<typeof setInterval> | null = null
 
 const taskData = computed(() => {
   if (!props.operationId) return null
@@ -100,9 +109,12 @@ const progress = computed(() => {
     }
   }
 
+  let actualStep = taskData.value.step || getStepFromPercentage(taskData.value.percentage)
+  actualStep = Math.max(1, Math.min(10, actualStep))
+  
   return {
-    step: taskData.value.step,
-    message: taskData.value.message,
+    step: actualStep,
+    message: taskData.value.message || getMessageFromStep(actualStep),
     percentage: taskData.value.percentage,
     error: taskData.value.error,
     errorMessage: taskData.value.errorMessage,
@@ -112,25 +124,83 @@ const progress = computed(() => {
 
 const isVisible = computed(() => props.visible && props.operationId && !isMinimized.value)
 
-const steps = [
-  'Validando dados',
-  'Analisando suspeitos',
-  'Preparando arquivos',
-  'Salvando documento',
-  'Salvando arquivo original',
-  'Gerando anonimização',
-  'Atualizando tabela',
-  'Finalizando processo'
-]
+const getStepFromPercentage = (percentage: number) => {
+  if (percentage >= 100) return 10
+  if (percentage >= 90) return 9
+  if (percentage >= 85) return 8
+  if (percentage >= 80) return 7
+  if (percentage >= 70) return 6
+  if (percentage >= 60) return 5
+  if (percentage >= 40) return 4
+  if (percentage >= 25) return 3
+  if (percentage >= 10) return 2
+  return 1
+}
+
+const getMessageFromStep = (step: number) => {
+  const messages: Record<number, string> = {
+    1: 'Iniciando processamento...',
+    2: 'Validando dados do processo...',
+    3: 'Analisando suspeição...',
+    4: 'Preparando arquivos...',
+    5: 'Processando anonimização...',
+    6: 'Salvando arquivos...',
+    7: 'Atualizando tabela de triagem...',
+    8: 'Tabela atualizada com sucesso!',
+    9: 'Iniciando notificação por email...',
+    10: 'Processo concluído com sucesso!'
+  }
+  return messages[step] || `Processando... (${step})`
+}
+
+const stepsToShow = computed(() => {
+  const backendSteps = [
+    'Iniciando processamento',
+    'Validando dados do processo',
+    'Analisando suspeição',
+    'Preparando arquivos',
+    'Processando anonimização',
+    'Salvando arquivos',
+    'Atualizando tabela de triagem',
+    'Tabela atualizada',
+    'Enviando notificação por email',
+    'Processo concluído'
+  ]
+  
+  const currentStep = progress.value.step
+  if (currentStep > backendSteps.length) {
+    const extraSteps = []
+    for (let i = backendSteps.length + 1; i <= currentStep; i++) {
+      extraSteps.push(`Etapa ${i}`)
+    }
+    return [...backendSteps, ...extraSteps]
+  }
+  
+  return backendSteps
+})
 
 function minimize() {
   isMinimized.value = true
   store.closeDetails()
+  clearAutoCloseTimers()
 }
 
 function close() {
+  clearAutoCloseTimers()
   emit('close')
   store.closeDetails()
+}
+
+function clearAutoCloseTimers() {
+  if (autoCloseTimer !== null) {
+    clearTimeout(autoCloseTimer)
+    autoCloseTimer = null
+  }
+  if (countdownInterval !== null) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
+  }
+  autoCloseCountdown.value = 0
 }
 
 const getStepClass = (stepNumber: number) => {
@@ -152,45 +222,7 @@ const getStepIconClass = (stepNumber: number) => {
     return 'border-gray-300 bg-gray-50'
   }
 }
-
-watch(() => progress.value, (newProgress, oldProgress) => {
-  if (!oldProgress) return
-
-  emit('progress', newProgress)
-
-  if (newProgress.completed && !oldProgress.completed) {
-    setTimeout(() => {
-      emit('complete', newProgress)
-    }, 2000)
-  }
-
-  if (newProgress.error && !oldProgress.error) {
-    setTimeout(() => {
-      emit('error', newProgress.errorMessage || newProgress.message)
-    }, 1000)
-  }
-}, { deep: true })
-
-onMounted(() => {
-  store.initializeSocket()
-})
-
-watch(() => props.operationId, (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    console.log('🔄 ProgressWebSocket: Nova operação detectada:', newId)
-    if (!store.inProgress.find(t => t.uuid === newId)) {
-      store.addTask(newId)
-    }
-  }
-})
-
-watch(() => progress.value.percentage, (newPercentage) => {
-  if (newPercentage > 0 && newPercentage < 100 && props.visible && !isMinimized.value) {
-    setTimeout(() => {
-      if (progress.value.percentage > 0 && progress.value.percentage < 100) {
-        minimize()
-      }
-    }, 3000)
-  }
+onUnmounted(() => {
+  clearAutoCloseTimers()
 })
 </script>
