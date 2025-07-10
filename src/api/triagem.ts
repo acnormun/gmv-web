@@ -41,8 +41,6 @@ export async function addProcesso(processo: ProcessoForm): Promise<any> {
     console.error('❌ Erro na resposta:', error)
     throw new Error(error.message || 'Erro ao adicionar processo')
   }
-
-  console.log('✅ Processo adicionado com sucesso')
   return res
 }
 

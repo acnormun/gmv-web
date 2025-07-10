@@ -12,7 +12,7 @@
             <img src="@/assets/plus-solid.svg" class="w-4 h-4" />
             Novo Processo
           </button>
-          <AddTriagem :open="showModal" :mode="modalMode" @close="showModal = false" @added="solicitarAtualizacao" />
+          <AddTriagem :open="showModal" :mode="modalMode" @close="showModal = false" />
         </div>
       </div>
 

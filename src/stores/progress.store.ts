@@ -1,5 +1,6 @@
 import { defineStore } from "pinia"
 import { ref, computed } from 'vue'
+import { useTriagemStore } from './triagem.store'
 import { io, Socket } from 'socket.io-client'
 
 export interface ProgressTask {
@@ -139,10 +140,19 @@ export const useProgressStore = defineStore('progresso', () => {
       task.errorMessage = data.errorMessage
     }
 
-    if (data.percentage !== undefined && data.percentage >= 100 && !data.error) {
+     if (
+      (data.percentage !== undefined && data.percentage >= 100 && !data.error) ||
+      (data.step !== undefined && data.step === 10 && !data.error)
+    ) {
       task.completed = true
       task.inProgress = false
       task.message = 'Processamento concluído!'
+
+      setTimeout(() => {
+        const triagemStore = useTriagemStore()
+        triagemStore.carregarProcessos()
+      }, 1000)
+
 
       setTimeout(() => {
         removeTask(uuid)
@@ -158,7 +168,6 @@ export const useProgressStore = defineStore('progresso', () => {
   function selectTask(uuid: string) {
     selectedTask.value = uuid
     showDetails.value = true
-    minimized.value = false
   }
 
   function closeDetails() {

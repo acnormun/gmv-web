@@ -222,15 +222,6 @@ const getStepIconClass = (stepNumber: number) => {
     return 'border-gray-300 bg-gray-50'
   }
 }
-
-const percentage = computed(() => taskData.value?.percentage)
-watch(percentage, () => {
-
-  if(percentage.value && percentage.value === 100){
-    triagemStore.carregarProcessos()
-  }
-
-})
 onUnmounted(() => {
   clearAutoCloseTimers()
 })
