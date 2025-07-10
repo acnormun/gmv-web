@@ -336,7 +336,7 @@ async function submit() {
       setTimeout(() => {
         emit('added', operationId)
         emit('close')
-      }, 3000);
+      }, 500);
 
     } else if (props.mode === 'edit') {
       loading.value = true

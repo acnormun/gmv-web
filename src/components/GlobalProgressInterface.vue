@@ -72,7 +72,18 @@
                     stroke="#e5e7eb"
                     stroke-width="3"
                   />
-                  <circle cx="16" cy="16" r="14" fill="none" stroke="#e5e7eb" stroke-width="3" />
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="14"
+                    fill="none"
+                    class="text-blue-500"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    :stroke-dasharray="CIRCUMFERENCE"
+                    :stroke-dashoffset="dashOffset(task.percentage)"
+                  />
                 </svg>
                 <div class="absolute inset-0 flex items-center justify-center">
                   <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
@@ -183,13 +194,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useProgressStore } from '@/stores/progress.store'
 import ProgressWebSocket from './ProgressWebSocket.vue'
 import { useTriagemStore } from '@/stores/triagem.store'
 
 const progressStore = useProgressStore()
 const triagemStore = useTriagemStore()
+
+const CIRCUMFERENCE = 2 * Math.PI * 14
+
+function dashOffset(percentage: number) {
+  return CIRCUMFERENCE * (1 - percentage / 100)
+}
+
 
 const connectionStatusClass = computed(() => {
   if (progressStore.connectionStatus === 'Conectado') return 'text-green-500'
