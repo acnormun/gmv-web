@@ -89,7 +89,6 @@ const triagemStore = useTriagemStore()
 const isMinimized = ref(false)
 const autoCloseCountdown = ref(0)
 
-// Usando ReturnType para evitar erro do TypeScript
 let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
 let countdownInterval: ReturnType<typeof setInterval> | null = null
 
@@ -154,19 +153,18 @@ const getMessageFromStep = (step: number) => {
   return messages[step] || `Processando... (${step})`
 }
 
-// Corrigir array de steps para corresponder ao backend (10 steps)
 const stepsToShow = computed(() => {
   const backendSteps = [
-    'Iniciando processamento',           // step 1 (5%)
-    'Validando dados do processo',       // step 2 (10%)
-    'Analisando suspeição',              // step 3 (25%)
-    'Preparando arquivos',               // step 4 (40%)
-    'Processando anonimização',          // step 5 (60%) ← ANONIMIZAÇÃO AQUI!
-    'Salvando arquivos',                 // step 6 (70%)
-    'Atualizando tabela de triagem',     // step 7 (80%)
-    'Tabela atualizada',                 // step 8 (85%)
-    'Enviando notificação por email',    // step 9 (90%)
-    'Processo concluído'                 // step 10 (100%)
+    'Iniciando processamento',
+    'Validando dados do processo',
+    'Analisando suspeição',
+    'Preparando arquivos',
+    'Processando anonimização',
+    'Salvando arquivos',
+    'Atualizando tabela de triagem',
+    'Tabela atualizada',
+    'Enviando notificação por email',
+    'Processo concluído'
   ]
   
   const currentStep = progress.value.step
@@ -205,36 +203,6 @@ function clearAutoCloseTimers() {
   autoCloseCountdown.value = 0
 }
 
-function startAutoClose() {
-  console.log('🕐 Iniciando fechamento automático em 3 segundos...')
-  autoCloseCountdown.value = 3
-  
-  countdownInterval = setInterval(() => {
-    autoCloseCountdown.value--
-    if (autoCloseCountdown.value <= 0) {
-      if (countdownInterval !== null) {
-        clearInterval(countdownInterval)
-        countdownInterval = null
-      }
-    }
-  }, 1000)
-  
-  autoCloseTimer = setTimeout(() => {
-    console.log('🔒 Fechando janela automaticamente após conclusão')
-    close()
-  }, 3000)
-}
-
-async function recarregarProcessos() {
-  try {
-    console.log('🔄 Recarregando lista de processos...')
-    await triagemStore.carregarProcessos()
-    console.log('✅ Lista de processos atualizada com sucesso')
-  } catch (error) {
-    console.error('❌ Erro ao recarregar processos:', error)
-  }
-}
-
 const getStepClass = (stepNumber: number) => {
   if (progress.value.step > stepNumber) {
     return 'text-green-600 font-medium'
@@ -255,66 +223,15 @@ const getStepIconClass = (stepNumber: number) => {
   }
 }
 
-watch(() => progress.value, async (newProgress, oldProgress) => {
-  if (!oldProgress) return
+const percentage = computed(() => taskData.value?.percentage)
+watch(percentage, () => {
 
-  emit('progress', newProgress)
-
-  if (newProgress.completed && !oldProgress.completed) {
-    console.log('✅ Processo concluído, iniciando ações de finalização')
-    
-    // 1. Recarregar lista de processos
-    await recarregarProcessos()
-    
-    // 2. Emitir evento de conclusão
-    setTimeout(() => {
-      emit('complete', newProgress)
-    }, 500)
-    
-    // 3. Iniciar fechamento automático
-    startAutoClose()
+  if(percentage.value && percentage.value === 100){
+    triagemStore.carregarProcessos()
   }
 
-  if (newProgress.error && !oldProgress.error) {
-    clearAutoCloseTimers()
-    setTimeout(() => {
-      emit('error', newProgress.errorMessage || newProgress.message)
-    }, 1000)
-  }
-}, { deep: true })
-
-onMounted(() => {
-  store.initializeSocket()
 })
-
 onUnmounted(() => {
   clearAutoCloseTimers()
-})
-
-watch(() => props.operationId, (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    console.log('🔄 ProgressWebSocket: Nova operação detectada:', newId)
-    clearAutoCloseTimers()
-    
-    if (!store.inProgress.find(t => t.uuid === newId)) {
-      store.addTask(newId)
-    }
-  }
-})
-
-watch(() => props.visible, (newVisible, oldVisible) => {
-  if (oldVisible && !newVisible) {
-    clearAutoCloseTimers()
-  }
-})
-
-watch(() => progress.value.percentage, (newPercentage) => {
-  if (newPercentage > 0 && newPercentage < 100 && props.visible && !isMinimized.value) {
-    setTimeout(() => {
-      if (progress.value.percentage > 0 && progress.value.percentage < 100) {
-        minimize()
-      }
-    }, 3000)
-  }
 })
 </script>

@@ -158,6 +158,7 @@ export const useProgressStore = defineStore('progresso', () => {
   function selectTask(uuid: string) {
     selectedTask.value = uuid
     showDetails.value = true
+    minimized.value = false
   }
 
   function closeDetails() {

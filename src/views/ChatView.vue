@@ -14,7 +14,6 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <!-- Botão de Estatísticas -->
           <button
             @click="mostrarEstatisticas = !mostrarEstatisticas"
             class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
@@ -25,7 +24,6 @@
             </svg>
           </button>
 
-          <!-- Botão de Limpar Chat -->
           <button
             @click="limparChat"
             class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
@@ -39,7 +37,6 @@
       </div>
     </div>
 
-    <!-- Painel de Estatísticas (Colapsável) -->
     <div v-if="mostrarEstatisticas && estatisticas" class="bg-blue-50 border-b border-blue-200 px-6 py-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         <div class="bg-white rounded-lg p-3 shadow-sm">
@@ -61,13 +58,9 @@
       </div>
     </div>
 
-    <!-- Área de Mensagens -->
     <div class="flex-1 overflow-hidden flex">
-      <!-- Lista de Mensagens -->
       <div class="flex-1 flex flex-col">
-        <!-- Scroll das Mensagens -->
         <div ref="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          <!-- Mensagem de Boas-vindas -->
           <div v-if="mensagens.length === 0" class="text-center py-8">
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +70,6 @@
             <h3 class="text-lg font-medium text-gray-900 mb-2">Olá! Como posso ajudar?</h3>
             <p class="text-gray-600 mb-4">Faça perguntas sobre os processos, análises ou qualquer informação do sistema GMV.</p>
 
-            <!-- Sugestões Rápidas -->
             <div v-if="sugestoes.length > 0" class="max-w-2xl mx-auto">
               <p class="text-sm text-gray-500 mb-3">Sugestões de consultas:</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -94,7 +86,6 @@
             </div>
           </div>
 
-          <!-- Mensagens da Conversa -->
           <div
             v-for="(mensagem, index) in mensagens"
             :key="index"
@@ -109,7 +100,6 @@
                   : 'bg-white border border-gray-200 text-gray-900'
               ]"
             >
-              <!-- Avatar e Info -->
               <div class="flex items-start space-x-3" v-if="mensagem.tipo === 'assistente'">
                 <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,7 +118,6 @@
                   </div>
                   <div class="prose prose-sm max-w-none" v-html="formatarMensagem(mensagem.conteudo)"></div>
 
-                  <!-- Chunks Recuperados (Expandível) -->
                   <div v-if="mensagem.chunks && mensagem.chunks.length > 0" class="mt-3 border-t pt-3">
                     <button
                       @click="mensagem.mostrarChunks = !mensagem.mostrarChunks"
@@ -161,12 +150,10 @@
                 </div>
               </div>
 
-              <!-- Mensagem do Usuário -->
               <div v-else>
                 {{ mensagem.conteudo }}
               </div>
 
-              <!-- Timestamp -->
               <div
                 class="text-xs mt-2 opacity-70"
                 :class="mensagem.tipo === 'usuario' ? 'text-blue-100' : 'text-gray-500'"
@@ -176,7 +163,6 @@
             </div>
           </div>
 
-          <!-- Indicador de Digitação -->
           <div v-if="digitando" class="flex justify-start">
             <div class="bg-white border border-gray-200 rounded-lg px-4 py-3 max-w-xs">
               <div class="flex items-center space-x-2">
@@ -191,7 +177,6 @@
           </div>
         </div>
 
-        <!-- Área de Input -->
         <div class="border-t border-gray-200 bg-white px-6 py-4">
           <form @submit.prevent="enviarMensagem" class="flex space-x-4">
             <div class="flex-1 relative">
@@ -207,13 +192,11 @@
                 style="min-height: 48px; max-height: 120px;"
               ></textarea>
 
-              <!-- Dica de Atalho -->
               <div class="absolute bottom-1 right-2 text-xs text-gray-400">
                 Enter para enviar • Shift+Enter para quebra de linha
               </div>
             </div>
 
-            <!-- Botão de Filtros -->
             <button
               type="button"
               @click="abrirDrawerContexto"
@@ -242,7 +225,6 @@
             </button>
           </form>
 
-          <!-- Barra de Filtros Ativa -->
           <div v-if="filtros.tema || filtros.status" class="mt-3 flex items-center space-x-2 text-sm">
             <span class="text-gray-500">Filtros ativos:</span>
             <span v-if="filtros.tema" class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -265,7 +247,6 @@
         </div>
       </div>
 
-      <!-- Painel Lateral de Filtros -->
       <div v-if="mostrarFiltros" class="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-medium text-gray-900">Filtros de Busca</h3>
@@ -319,7 +300,6 @@
             </button>
           </div>
 
-          <!-- Estatísticas dos Filtros -->
           <div v-if="estatisticas" class="pt-4 border-t">
             <h4 class="text-sm font-medium text-gray-700 mb-2">Distribuição</h4>
 
@@ -372,10 +352,6 @@ import {
   validateQuery
 } from '@/api/rag'
 
-// ==========================================
-// 🔧 INTERFACES E TIPOS
-// ==========================================
-
 interface Mensagem {
   tipo: 'usuario' | 'assistente'
   conteudo: string
@@ -385,10 +361,6 @@ interface Mensagem {
   chunks?: any[]
   mostrarChunks?: boolean
 }
-
-// ==========================================
-// 🔧 ESTADO REATIVO
-// ==========================================
 
 const mensagens = ref<Mensagem[]>([])
 const novaMensagem = ref('')
@@ -425,10 +397,6 @@ const filtros = ref({
   k: 5
 })
 
-// ==========================================
-// 🔧 COMPUTADAS
-// ==========================================
-
 const temasDisponiveis = computed(() => {
   if (!estatisticas.value?.tema_distribution) return []
   return Object.keys(estatisticas.value.tema_distribution)
@@ -438,10 +406,6 @@ const statusDisponiveis = computed(() => {
   if (!estatisticas.value?.status_distribution) return []
   return Object.keys(estatisticas.value.status_distribution)
 })
-
-// ==========================================
-// 🌐 FUNÇÕES DE API
-// ==========================================
 
 async function verificarStatusRAG() {
   try {
@@ -546,7 +510,6 @@ function limparChat() {
 }
 
 function aplicarFiltros() {
-  // Se há mensagens, reprocessa a última consulta com filtros
   if (mensagens.value.length > 0) {
     const ultimaMensagemUsuario = mensagens.value
       .slice()
@@ -573,7 +536,6 @@ function scrollToBottom() {
 }
 
 function formatarMensagem(conteudo: string): string {
-  // Converte markdown básico para HTML
   return conteudo
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -592,21 +554,15 @@ function formatarConfianca(confidence: number): string {
   return formatConfidence(confidence)
 }
 
-// ==========================================
-// 🔄 LIFECYCLE E WATCHERS
-// ==========================================
 
 onMounted(async () => {
   await verificarStatusRAG()
   await carregarSugestoes()
-
-  // Foca no input
   if (messageInput.value) {
     messageInput.value.focus()
   }
 })
 
-// Auto-resize do textarea
 watch(novaMensagem, () => {
   if (messageInput.value) {
     messageInput.value.style.height = 'auto'
@@ -614,9 +570,6 @@ watch(novaMensagem, () => {
   }
 })
 
-// ==========================================
-// 🎯 ATALHOS DE TECLADO
-// ==========================================
 
 onMounted(() => {
   document.addEventListener('keydown', (e) => {
@@ -638,7 +591,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Animações personalizadas */
 @keyframes bounce {
   0%, 80%, 100% {
     transform: scale(0);
@@ -652,7 +604,6 @@ onMounted(() => {
   animation: bounce 1.4s infinite;
 }
 
-/* Estilo para o scroll */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
 }
@@ -670,7 +621,6 @@ onMounted(() => {
   background: #a8a8a8;
 }
 
-/* Estilo para conteúdo prose */
 .prose {
   color: inherit;
 }

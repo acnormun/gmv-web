@@ -110,7 +110,7 @@ const props = defineProps<{
   data: Processo[]
 }>()
 
-const lista = computed(() => props.data)
+const lista = computed(() => store.processos)
 
 const totalPaginas = computed(() =>
   Math.ceil(lista.value.length / itensPorPagina)

@@ -183,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useProgressStore } from '@/stores/progress.store'
 import ProgressWebSocket from './ProgressWebSocket.vue'
 import { useTriagemStore } from '@/stores/triagem.store'
@@ -208,7 +208,6 @@ function cancelTask(uuid: string) {
 }
 
 function handleComplete() {
-  console.log('AQUIIIII')
   triagemStore.carregarProcessos()
   progressStore.closeDetails()
 }
@@ -216,8 +215,6 @@ function handleComplete() {
 function handleError(message: string) {
   console.error('❌ Erro no processo:', message)
 }
-
-progressStore.initializeSocket()
 </script>
 
 <style scoped>

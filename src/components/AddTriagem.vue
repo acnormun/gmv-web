@@ -330,16 +330,13 @@ async function submit() {
       const operationId = result.operation_id
       const numeroProcesso = form.value.numeroProcesso
 
-      console.log('🆔 Adicionando à store global:', { operationId, numeroProcesso })
-
       progressStore.addTask(operationId, numeroProcesso)
 
-      console.log('✅ Task adicionada à store global!')
-      console.log('📊 Tasks ativas:', progressStore.activeTasks.length)
-      console.log('🔗 Interface minimizada:', progressStore.minimized)
 
-      emit('added', operationId)
-      emit('close')
+      setTimeout(() => {
+        emit('added', operationId)
+        emit('close')
+      }, 3000);
 
     } else if (props.mode === 'edit') {
       loading.value = true
