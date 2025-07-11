@@ -85,7 +85,6 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'complete', 'error', 'progress'])
 
 const store = useProgressStore()
-const triagemStore = useTriagemStore()
 const isMinimized = ref(false)
 const autoCloseCountdown = ref(0)
 
@@ -123,6 +122,22 @@ const progress = computed(() => {
 })
 
 const isVisible = computed(() => props.visible && props.operationId && !isMinimized.value)
+
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) {
+      isMinimized.value = false
+    }
+  }
+)
+
+watch(
+  () => props.operationId,
+  () => {
+    isMinimized.value = false
+  }
+)
 
 const getStepFromPercentage = (percentage: number) => {
   if (percentage >= 100) return 10
