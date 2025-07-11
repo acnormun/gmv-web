@@ -15,22 +15,22 @@
 
         <div class="flex items-center space-x-3">
           <button
-            @click="mostrarEstatisticas = !mostrarEstatisticas"
-            class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-            title="Estatísticas do Sistema"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-            </svg>
-          </button>
-
-          <button
             @click="limparChat"
             class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
             title="Limpar Conversa"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+          </button>
+
+          <button
+            @click="salvarHistorico"
+            class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            title="Salvar Histórico"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
             </svg>
           </button>
         </div>
@@ -341,6 +341,7 @@
 <script setup lang="ts">
 import ContextDrawer from '@/components/ContextDrawer.vue'
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
+import { useChatStore } from '@/stores/chat.store'
 import {
   getRAGStatus,
   queryRAG,
@@ -352,17 +353,8 @@ import {
   validateQuery
 } from '@/api/rag'
 
-interface Mensagem {
-  tipo: 'usuario' | 'assistente'
-  conteudo: string
-  timestamp: Date
-  strategy?: string
-  confidence?: number
-  chunks?: any[]
-  mostrarChunks?: boolean
-}
-
-const mensagens = ref<Mensagem[]>([])
+const chatStore = useChatStore()
+const mensagens = chatStore.mensagens
 const novaMensagem = ref('')
 const digitando = ref(false)
 const messagesContainer = ref<HTMLElement>()
@@ -450,7 +442,7 @@ async function enviarMensagem() {
 
   novaMensagem.value = ''
 
-  mensagens.value.push({
+  chatStore.addMensagem({
     tipo: 'usuario',
     conteudo: mensagemUsuario,
     timestamp: new Date()
@@ -467,7 +459,7 @@ async function enviarMensagem() {
       context: processosSelecionados.value,
       query: ''
     })
-    mensagens.value.push({
+    chatStore.addMensagem({
       tipo: 'assistente',
       conteudo: resultado.data.answer || 'Desculpe, não consegui processar sua consulta.',
       timestamp: new Date(),
@@ -480,8 +472,7 @@ async function enviarMensagem() {
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error)
 
-    // Adiciona mensagem de erro
-    mensagens.value.push({
+    chatStore.addMensagem({
       tipo: 'assistente',
       conteudo: `Desculpe, ocorreu um erro ao processar sua consulta: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
       timestamp: new Date()
@@ -505,13 +496,24 @@ function enviarSugestao(query: string) {
 
 function limparChat() {
   if (confirm('Tem certeza que deseja limpar toda a conversa?')) {
-    mensagens.value = []
+    chatStore.clear()
   }
 }
 
+function salvarHistorico() {
+  const texto = chatStore.exportAsText()
+  const blob = new Blob([texto], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `historico-chat-${new Date().toISOString().slice(0, 10)}.txt`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 function aplicarFiltros() {
-  if (mensagens.value.length > 0) {
-    const ultimaMensagemUsuario = mensagens.value
+  if (mensagens.length > 0) {
+    const ultimaMensagemUsuario = mensagens
       .slice()
       .reverse()
       .find(m => m.tipo === 'usuario')
@@ -556,11 +558,14 @@ function formatarConfianca(confidence: number): string {
 
 
 onMounted(async () => {
+  chatStore.load()
   await verificarStatusRAG()
   await carregarSugestoes()
   if (messageInput.value) {
     messageInput.value.focus()
   }
+  await nextTick()
+  scrollToBottom()
 })
 
 watch(novaMensagem, () => {
